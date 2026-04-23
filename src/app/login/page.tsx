@@ -11,7 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Stethoscope, Loader2, Eye, EyeOff, Building, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, useUser } from '@/firebase';
+import { useRouter } from 'next/navigation';
 import { signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, deleteUser, type User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -74,6 +75,8 @@ export default function LoginPage() {
   const { toast } = useToast();
   const auth = useAuth();
   const firestore = useFirestore();
+  const router = useRouter();
+  const { user: authUser, profile: userProfile, isUserLoading } = useUser();
   
   const currentFormSchema = formType === 'login' ? loginSchema : signupSchema;
 
@@ -85,6 +88,31 @@ export default function LoginPage() {
   });
 
   const watchedOnboardingType = watch('onboardingType');
+
+  // Handle existing auth state on mount/change
+  React.useEffect(() => {
+    if (isUserLoading) return;
+
+    if (authUser && userProfile) {
+      // User is already logged in and has a profile, go to dashboard
+      const dashboardPath = userProfile.role === 'admin' ? '/admin' : userProfile.role === 'staff' ? '/staff-tasks' : '/';
+      router.replace(dashboardPath);
+    } else if (authUser && !userProfile && !googleUserForOnboarding) {
+      // User is logged in but has no profile (e.g. refreshed during onboarding)
+      // Set to signup mode to allow completing registration
+      setFormType('signup');
+      reset({
+        fullName: authUser.displayName || '',
+        email: authUser.email || '',
+        phoneNumber: authUser.phoneNumber || '',
+        onboardingType: 'private'
+      });
+      toast({
+        title: "Complete Registration",
+        description: "Please finish setting up your account to continue.",
+      });
+    }
+  }, [authUser, userProfile, isUserLoading, router, reset, toast, googleUserForOnboarding]);
 
   React.useEffect(() => {
     setOnboardingType(watchedOnboardingType);
@@ -231,6 +259,15 @@ export default function LoginPage() {
   const currentTitle = googleUserForOnboarding ? `Complete your registration, ${googleUserForOnboarding.displayName?.split(' ')[0]}`
                        : formType === 'login' ? 'Sign in to Wellness Hub'
                        : 'Create your Wellness Hub account';
+
+  if (isUserLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="ml-2 text-muted-foreground">Checking authentication...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-3">

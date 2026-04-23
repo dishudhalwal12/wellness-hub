@@ -64,7 +64,9 @@ export default function AppShellController({
         router.replace(defaultPath);
         return;
       }
-    } else if (!user) {
+    } else if (!user || (user && !profile)) {
+      // If no user is logged in, or if user is logged in but has no profile (needs onboarding),
+      // redirect them to the login/onboarding page.
       router.replace('/login');
       return;
     }
