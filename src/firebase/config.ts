@@ -10,12 +10,12 @@ const embeddedFirebaseConfig: FirebaseOptions = {
 };
 
 export const firebaseConfig: FirebaseOptions = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? embeddedFirebaseConfig.apiKey,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? embeddedFirebaseConfig.authDomain,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? embeddedFirebaseConfig.projectId,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? embeddedFirebaseConfig.storageBucket,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? embeddedFirebaseConfig.messagingSenderId,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? embeddedFirebaseConfig.appId,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || embeddedFirebaseConfig.apiKey,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || embeddedFirebaseConfig.authDomain,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || embeddedFirebaseConfig.projectId,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || embeddedFirebaseConfig.storageBucket,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || embeddedFirebaseConfig.messagingSenderId,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || embeddedFirebaseConfig.appId,
 };
 
 export const hasFirebaseConfig = [
