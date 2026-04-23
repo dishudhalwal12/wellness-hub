@@ -48,7 +48,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useUser } from '@/firebase-config';
 
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 

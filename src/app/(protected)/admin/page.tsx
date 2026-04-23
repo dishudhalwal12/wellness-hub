@@ -11,8 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { createInvite } from '@/firebase/user-actions';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase-config';
+import { createInvite } from '@/firebase-config/user-actions';
 import { demoInviteCodes, demoMembers } from '@/lib/demo-data';
 
 interface Invite extends DocumentData {

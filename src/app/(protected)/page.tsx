@@ -10,7 +10,7 @@ import { RecentAppointments } from '@/components/dashboard/recent-appointments';
 import type { RecentAppointment } from '@/components/dashboard/recent-appointments';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase-config';
 import { demoAppointments, demoPatients } from '@/lib/demo-data';
 
 import type { Patient } from './patients/page';

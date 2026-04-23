@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { generatePracticeInsightsReport } from "@/ai/flows/ai-practice-insights";
 import { useToast } from "@/hooks/use-toast";
-import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
+import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase-config";
 import { demoPatients, demoPracticeReport, demoTasks } from "@/lib/demo-data";
 
 import type { Patient } from "../patients/page";

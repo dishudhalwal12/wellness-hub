@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useUser } from '@/firebase';
+import { useUser } from '@/firebase-config';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import AppShell from './AppShell';
