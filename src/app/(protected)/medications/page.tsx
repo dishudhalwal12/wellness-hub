@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from '@/firebase-config';
+import { useUser } from '@/firebase';
 import { getSeedMedications } from '@/lib/demo-data';
 
 import type { Medication } from './types';

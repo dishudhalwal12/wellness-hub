@@ -13,7 +13,7 @@ import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogT
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase-config';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { demoTasks } from '@/lib/demo-data';
 import { cn } from '@/lib/utils';
 
