@@ -2,7 +2,6 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
-  transpilePackages: ['firebase', '@firebase/app', '@firebase/auth', '@firebase/firestore', '@firebase/storage'],
   // Tell Next.js server bundler to never try to bundle firebase packages.
   // Firebase is a client-only SDK and must never be imported on the server.
   serverExternalPackages: [
