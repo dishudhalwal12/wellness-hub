@@ -2,7 +2,7 @@
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { Firestore, doc, getDoc } from 'firebase/firestore';
+import { Firestore, doc, getDoc, setDoc } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
@@ -64,6 +64,12 @@ interface FirebaseProviderProps {
 
 const PROFILE_CACHE_PREFIX = 'wellness-hub-profile:';
 
+function omitUndefinedFields<T extends Record<string, any>>(value: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, fieldValue]) => fieldValue !== undefined)
+  ) as Partial<T>;
+}
+
 function getCachedProfile(uid: string): UserProfile | null {
   if (typeof window === 'undefined') {
     return null;
@@ -122,24 +128,47 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       auth,
       async (firebaseUser) => { 
         if (firebaseUser) {
-           const cachedProfile = getCachedProfile(firebaseUser.uid);
-           if (cachedProfile) {
-             setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null, profile: cachedProfile });
-           } else {
-             setUserAuthState({ user: firebaseUser, isUserLoading: true, userError: null, profile: null });
-           }
+           setUserAuthState({
+             user: firebaseUser,
+             isUserLoading: true,
+             userError: null,
+             profile: null,
+           });
 
            try {
+                const cachedProfile = getCachedProfile(firebaseUser.uid);
                 const userDocRef = doc(firestore, 'users', firebaseUser.uid);
                 const userDoc = await getDoc(userDocRef);
                 let profileData = userDoc.exists() ? userDoc.data() as UserProfile : null;
+
+                if (!profileData) {
+                const fallbackProfile: UserProfile = cachedProfile ?? {};
+                const profilePayload = omitUndefinedFields({
+                        ...fallbackProfile,
+                        name: fallbackProfile.name || firebaseUser.displayName || firebaseUser.email || 'User',
+                        email: fallbackProfile.email || firebaseUser.email || '',
+                        role: fallbackProfile.role || 'doctor',
+                        orgId: fallbackProfile.orgId,
+                        orgName: fallbackProfile.orgName,
+                });
+
+                profileData = profilePayload as UserProfile;
+
+                await setDoc(userDocRef, profilePayload, { merge: true });
+                }
                 
-                // Also fetch org name if orgId exists
+        // Also fetch org name if orgId exists. This lookup is best-effort:
+        // if Firestore rules deny it, keep the user signed in with the
+        // base profile instead of blanking the session.
                 if (profileData?.orgId) {
-                    const orgDocRef = doc(firestore, 'orgs', profileData.orgId);
-                    const orgDoc = await getDoc(orgDocRef);
-                    if (orgDoc.exists()) {
-                        profileData.orgName = orgDoc.data().name;
+          try {
+            const orgDocRef = doc(firestore, 'orgs', profileData.orgId);
+            const orgDoc = await getDoc(orgDocRef);
+            if (orgDoc.exists()) {
+              profileData.orgName = orgDoc.data().name;
+            }
+          } catch (orgError) {
+            console.warn('FirebaseProvider: Unable to load org details:', orgError);
                     }
                 }
 

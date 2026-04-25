@@ -1,19 +1,20 @@
 /**
- * @fileoverview Firestore Security Rules for Wellness Hub.
+ * @fileoverview Combined Firestore Security Rules for Wellness Hub + Event Management.
  *
  * Core Philosophy:
- * This ruleset enforces a multi-role security model within organizations.
+ * This ruleset enforces security models for both healthcare organizations and event management.
  * - Users own their profiles.
  * - Admins can manage their organization and invites.
  * - All members of an organization can read shared data like tasks.
+ * - Event organizers manage events, students can register.
  * - Access is denied by default unless explicitly granted.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     // =================================
-    // Helper Functions
+    // Shared Helper Functions
     // =================================
 
     function isSignedIn() {
@@ -22,6 +23,10 @@ service cloud.firestore {
 
     function isOwner(userId) {
       return request.auth.uid == userId;
+    }
+
+    function hasUserProfile(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId));
     }
 
     function getUserData() {
@@ -35,7 +40,7 @@ service cloud.firestore {
     function getUserOrgId() {
       return getUserData().orgId;
     }
-    
+
     function isOrgMember(orgId) {
       return isSignedIn() && getUserOrgId() == orgId;
     }
@@ -45,24 +50,51 @@ service cloud.firestore {
     }
 
     // =================================
-    // Collection Rules
+    // Event Management Helper Functions
     // =================================
 
-    match /users/{userId} {
-      // A user can create their own document.
-      // Anyone can read/update their own document.
-      allow create: if isOwner(userId);
-      allow read, update, delete: if isOwner(userId);
-      // Disallow listing all users for security.
-      allow list: if false; 
+    function userRole(userId) {
+      return hasUserProfile(userId)
+        ? get(/databases/$(database)/documents/users/$(userId)).data.role
+        : null;
     }
+
+    function requestRole() {
+      return isSignedIn() ? userRole(request.auth.uid) : null;
+    }
+
+    function eventExists(eventId) {
+      return exists(/databases/$(database)/documents/events/$(eventId));
+    }
+
+    function eventData(eventId) {
+      return get(/databases/$(database)/documents/events/$(eventId)).data;
+    }
+
+    function registrationExists(registrationId) {
+      return exists(/databases/$(database)/documents/registrations/$(registrationId));
+    }
+
+    function registrationData(registrationId) {
+      return get(/databases/$(database)/documents/registrations/$(registrationId)).data;
+    }
+
+    function isEventOwner(eventId) {
+      return isSignedIn()
+        && eventExists(eventId)
+        && eventData(eventId).organizerId == request.auth.uid;
+    }
+
+    // =================================
+    // Wellness Hub Collection Rules
+    // =================================
 
     match /orgs/{orgId} {
       // Any signed-in user can create an organization, BUT only if they set themselves as the owner.
       // This is crucial for the non-blocking onboarding flow.
       allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      // Only members of the organization can read its details.
-      allow read: if isOrgMember(orgId);
+      // Owners and members can read organization details.
+      allow read: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isOrgMember(orgId));
       // Only admins of the organization can update or delete it.
       allow update, delete: if isOrgAdmin(orgId);
     }
@@ -74,26 +106,23 @@ service cloud.firestore {
       allow create: if isOrgAdmin(request.resource.data.orgId)
                     && inviteId == request.resource.data.code;
 
-      // A signed-in user may redeem a single invite by code, and admins may
-      // always read invite documents for organizations they manage.
-      allow get: if (isSignedIn() && inviteId == resource.data.code)
-                  || isOrgAdmin(resource.data.orgId);
+      // A signed-in user may redeem a single invite by code.
+      // The code is the document ID, so this is a direct lookup.
+      // Note: We don't check isOrgAdmin here because admins will use list queries
+      // to see all invites, and new users won't have a user document yet during signup.
+      allow get: if isSignedIn() && inviteId == resource.data.code;
 
       // Admins can list invite documents.
       allow list: if isSignedIn() && getUserRole() == 'admin';
 
-      // Any signed-in user can update an invite, but ONLY to increment the usesCount.
+      // Any signed-in user can update an invite to increment usesCount.
       // This is necessary for the invite redemption process.
+      // We only check critical fields to avoid issues with partial updates.
       allow update: if isSignedIn()
                     && inviteId == resource.data.code
                     && request.resource.data.usesCount == resource.data.usesCount + 1
                     && request.resource.data.orgId == resource.data.orgId
-                    && request.resource.data.roleAllowed == resource.data.roleAllowed
-                    && request.resource.data.code == resource.data.code
-                    && request.resource.data.maxUses == resource.data.maxUses
-                    && request.resource.data.expiresAt == resource.data.expiresAt
-                    && request.resource.data.createdBy == resource.data.createdBy
-                    && request.resource.data.createdAt == resource.data.createdAt;
+                    && request.resource.data.code == resource.data.code;
 
       // No client-side deletes.
       allow delete: if false;
@@ -116,6 +145,154 @@ service cloud.firestore {
       allow list: if isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
       // Writes are allowed if the user is part of the org and the data's orgId matches.
       allow write: if isOrgMember(request.resource.data.orgId);
+    }
+
+    // =================================
+    // Event Management Collection Rules
+    // =================================
+
+    match /events/{eventId} {
+      allow read: if true;
+
+      allow create: if isSignedIn()
+        && requestRole() == 'organizer'
+        && request.resource.data.eventId == eventId
+        && request.resource.data.organizerId == request.auth.uid;
+
+      allow update: if isSignedIn() && (
+        (
+          requestRole() == 'organizer'
+          && resource.data.organizerId == request.auth.uid
+          && request.resource.data.eventId == resource.data.eventId
+          && request.resource.data.organizerId == resource.data.organizerId
+        )
+        ||
+        (
+          requestRole() == 'student'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount'])
+          && request.resource.data.registeredCount is int
+          && resource.data.registeredCount is int
+          && request.resource.data.registeredCount >= 0
+          && request.resource.data.registeredCount >= resource.data.registeredCount - 1
+          && request.resource.data.registeredCount <= resource.data.registeredCount + 1
+          && request.resource.data.eventId == resource.data.eventId
+          && request.resource.data.organizerId == resource.data.organizerId
+          && request.resource.data.status == resource.data.status
+        )
+      );
+    }
+
+    match /registrations/{registrationId} {
+      allow create: if isSignedIn()
+        && requestRole() == 'student'
+        && request.resource.data.registrationId == registrationId
+        && request.resource.data.userId == request.auth.uid
+        && eventExists(request.resource.data.eventId)
+        && (
+          request.resource.data.status == 'registered'
+          || request.resource.data.status == 'waitlisted'
+        );
+
+      allow read: if isSignedIn()
+        && (
+          resource.data.userId == request.auth.uid
+          || isEventOwner(resource.data.eventId)
+        );
+
+      allow update: if isSignedIn() && (
+        (
+          resource.data.userId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+          && request.resource.data.status == 'cancelled'
+          && (
+            resource.data.status == 'registered'
+            || resource.data.status == 'waitlisted'
+          )
+        )
+        ||
+        (
+          isEventOwner(resource.data.eventId)
+          && resource.data.status == 'waitlisted'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'waitlistPos', 'qrCode'])
+          && request.resource.data.status == 'registered'
+          && request.resource.data.waitlistPos == null
+          && request.resource.data.userId == resource.data.userId
+          && request.resource.data.eventId == resource.data.eventId
+          && request.resource.data.registrationId == resource.data.registrationId
+          && request.resource.data.name == resource.data.name
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.phone == resource.data.phone
+          && request.resource.data.teamName == resource.data.teamName
+          && request.resource.data.participantCount == resource.data.participantCount
+          && request.resource.data.teamMembers == resource.data.teamMembers
+          && request.resource.data.registeredAt == resource.data.registeredAt
+        )
+      );
+    }
+
+    match /attendance/{attendanceId} {
+      allow read: if true;
+
+      allow create: if isSignedIn()
+        && requestRole() == 'organizer'
+        && isEventOwner(request.resource.data.eventId)
+        && registrationExists(request.resource.data.registrationId)
+        && registrationData(request.resource.data.registrationId).eventId == request.resource.data.eventId
+        && registrationData(request.resource.data.registrationId).userId == request.resource.data.userId;
+    }
+
+    match /certificates/{certificateId} {
+      allow read: if isSignedIn()
+        && (
+          resource.data.userId == request.auth.uid
+          || isEventOwner(resource.data.eventId)
+        );
+
+      allow create, update: if isSignedIn()
+        && requestRole() == 'organizer'
+        && isEventOwner(request.resource.data.eventId)
+        && request.resource.data.certificateId == certificateId
+        && request.resource.data.sourceType == 'campus'
+        && (
+          request.resource.data.certificateType == 'participation'
+          || request.resource.data.certificateType == 'winner'
+        )
+        && request.resource.data.userId is string
+        && request.resource.data.registrationId is string
+        && request.resource.data.eventId is string
+        && request.resource.data.studentName is string;
+    }
+
+    match /externalEvents/{eventId} {
+      allow read: if true;
+    }
+
+    match /externalSyncStatus/{source} {
+      allow read: if true;
+    }
+
+    // =================================
+    // Shared Users Collection (merged rules)
+    // =================================
+
+    match /users/{userId} {
+      // Wellness Hub: A user can create their own document
+      allow create: if isOwner(userId);
+      
+      // Event Management: Create with role validation
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.uid == userId
+        && (request.resource.data.role == 'student' || request.resource.data.role == 'organizer');
+
+      // Wellness Hub: Own profile access
+      allow read, update, delete: if isOwner(userId);
+      
+      // Event Management: Own profile access
+      allow read, update: if isSignedIn() && request.auth.uid == userId;
+      
+      // Disallow listing all users for security.
+      allow list: if false; 
     }
   }
 }

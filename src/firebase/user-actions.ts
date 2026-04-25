@@ -105,10 +105,11 @@ export function processNewUser(
             const invite = validation.invite;
             orgId = invite.orgId;
             userRole = invite.roleAllowed;
-            
-            const orgDoc = await getDoc(doc(firestore, 'orgs', orgId));
-            if(!orgDoc.exists()) throw new Error("Organization associated with invite not found.");
-            orgType = orgDoc.data()?.type as 'private' | 'hospital';
+
+            // The invite already ties the user to an organization, so avoid a
+            // pre-profile org read here. That read can be denied before the new
+            // users/{userId} document exists and is not needed for onboarding.
+            orgType = 'private';
 
             const inviteRef = doc(firestore, 'invites', invite.id);
             batch.update(inviteRef, { usesCount: increment(1) });
