@@ -13,6 +13,10 @@ const nextConfig: NextConfig = {
     '@firebase/app',
     '@firebase/auth',
     '@firebase/firestore',
+    'genkit',
+    '@genkit-ai/core',
+    'yaml',
+    'dotprompt',
   ],
   turbopack: {
     root: process.cwd(),

@@ -66,7 +66,7 @@ function transformPatientToQueueItem(patient: Patient, index: number): QueueItem
 }
 
 export default function ReceptionPage() {
-    const [queue, setQueue] = useState<QueueItem[]>(demoQueue);
+    const [queue, setQueue] = useState<QueueItem[]>([]);
     const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -90,15 +90,14 @@ export default function ReceptionPage() {
     useEffect(() => {
         if (patients?.length) {
             setQueue(patients.map(transformPatientToQueueItem));
-            return;
+        } else {
+            setQueue([]);
         }
-
-        setQueue(demoQueue);
     }, [patients]);
 
-    const displayTasks = (tasks?.length ? tasks : demoTasks) as Task[];
-    const patientCount = patients?.length ? patients.length : demoPatients.length;
-    const hasLiveData = (patients?.length ?? 0) > 0 || (tasks?.length ?? 0) > 0;
+    const displayTasks = (tasks ?? []) as Task[];
+    const patientCount = patients?.length ?? 0;
+    const hasData = (patients?.length ?? 0) > 0 || (tasks?.length ?? 0) > 0;
 
     const stats = useMemo(() => {
         const waiting = queue.filter((patient) => patient.status === 'Waiting').length;
@@ -169,8 +168,8 @@ export default function ReceptionPage() {
                 description="A polished AI-assisted reception cockpit with active queueing, checklist completion, and live task visibility even when real backend collections are still empty."
             >
                 <span className="glass-chip">{queue.length} patients in the active queue</span>
-                <Badge variant={hasLiveData ? 'secondary' : 'outline'}>
-                    {patientsLoading || tasksLoading ? 'Syncing live front-desk data' : hasLiveData ? 'Live operations connected' : 'Reception loaded'}
+                <Badge variant={hasData ? 'secondary' : 'outline'}>
+                    {patientsLoading || tasksLoading ? 'Syncing live front-desk data' : hasData ? 'Live operations connected' : 'Reception ready'}
                 </Badge>
             </PageHeader>
 

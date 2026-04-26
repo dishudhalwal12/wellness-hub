@@ -134,7 +134,7 @@ function AINoteTaker() {
         }, 1200);
     };
 
-    const previewContent = noteContent || demoAiNoteDraft;
+    const previewContent = noteContent || "";
 
     return (
         <Card>
@@ -222,7 +222,7 @@ export default function TelehealthPage() {
                 />
                 <MetricCard
                     title="Shared Files"
-                    value={demoTelehealthDocuments.length.toString()}
+                    value="0"
                     description="Relevant patient documents are surfaced so the workspace never feels empty."
                     icon={FileUp}
                     trend="Review queued"
@@ -320,12 +320,7 @@ export default function TelehealthPage() {
                             <CardDescription>Quick prep indicators that make the workflow look managed instead of empty.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4 text-sm">
-                            {demoTelehealthChecklist.map((item) => (
-                                <div key={item.id} className="flex items-center space-x-3 rounded-[18px] border border-border/70 bg-white/70 px-4 py-3">
-                                    <Checkbox id={item.id} checked={item.checked} />
-                                    <label htmlFor={item.id}>{item.label}</label>
-                                </div>
-                            ))}
+                            <div className="text-muted-foreground italic py-2">No checklist items for this visit.</div>
                         </CardContent>
                     </Card>
 
@@ -335,17 +330,7 @@ export default function TelehealthPage() {
                             <CardDescription>Recent clinical files and a clear upload action for the visit.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <ul className="space-y-3 text-sm">
-                                {demoTelehealthDocuments.map((document) => (
-                                    <li key={document.id} className="flex items-center justify-between rounded-[18px] border border-border/70 bg-white/70 px-4 py-3">
-                                        <div>
-                                            <p className="font-medium text-foreground">{document.name}</p>
-                                            <p className="text-muted-foreground">{document.type}</p>
-                                        </div>
-                                        <Button variant="ghost" size="sm">View</Button>
-                                    </li>
-                                ))}
-                            </ul>
+                            <div className="text-muted-foreground italic py-2 text-sm">No documents shared yet.</div>
                             <Separator className="my-4" />
                             <Button variant="outline" className="w-full">
                                 <FileUp className="mr-2 h-4 w-4" />

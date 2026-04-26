@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import ReactMarkdown from 'react-markdown';
 import { generatePrescription } from '@/ai/flows/ai-prescription-generator';
 import { useDoc, useMemoFirebase } from '@/firebase';
+import Link from "next/link";
 import { doc, type DocumentData } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import type { Patient } from '@/app/(protected)/patients/page';
@@ -509,15 +510,30 @@ export default function PatientProfilePage() {
   const { toast } = useToast();
   const firestore = useFirestore();
 
+  const isDemoPatient = patientId?.startsWith('demo-');
+
   const patientDocRef = useMemoFirebase(() => {
-      if (!firestore || !patientId) return null;
+      if (!firestore || !patientId || isDemoPatient) return null;
       return doc(firestore, 'patients', patientId);
-  }, [firestore, patientId]);
+  }, [firestore, patientId, isDemoPatient]);
 
   const { data: patient, isLoading: isPatientLoading } = useDoc<Patient>(patientDocRef);
-  const displayPatient = (patient ?? getFallbackPatient(patientId)) as Patient;
-  const effectiveReportContent = reportContent ?? demoPatientReportContent;
-  const effectiveFileName = fileName ?? 'baseline-labs-mar-2026.txt';
+  const displayPatient = (patient ?? (isDemoPatient ? getFallbackPatient(patientId) : null)) as Patient;
+
+  if (!displayPatient && !isPatientLoading) {
+      return (
+          <div className="flex flex-col items-center justify-center min-h-[400px]">
+              <h2 className="text-2xl font-bold">Patient Not Found</h2>
+              <p className="text-muted-foreground mt-2">The patient record you are looking for does not exist or you don't have permission to view it.</p>
+              <Button asChild className="mt-4">
+                  <Link href="/patients">Back to Patients</Link>
+              </Button>
+          </div>
+      );
+  }
+
+  const effectiveReportContent = reportContent ?? (isDemoPatient ? demoPatientReportContent : "");
+  const effectiveFileName = fileName ?? (isDemoPatient ? 'baseline-labs-mar-2026.txt' : '');
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

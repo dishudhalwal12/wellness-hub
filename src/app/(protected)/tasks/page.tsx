@@ -240,7 +240,6 @@ function EditTaskDialog({
 export default function TasksPage() {
   const { user, profile } = useUser();
   const firestore = useFirestore();
-  const [demoBoardTasks, setDemoBoardTasks] = useState<Task[]>(demoTasks as Task[]);
   const [draggingOver, setDraggingOver] = useState<TaskStatus | null>(null);
   const [editingTask, setEditingTask] = useState<Partial<Task> | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -251,8 +250,7 @@ export default function TasksPage() {
   }, [firestore, profile?.orgId]);
 
   const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(tasksQuery);
-  const hasLiveTasks = (tasks?.length ?? 0) > 0;
-  const boardTasks = hasLiveTasks ? tasks || [] : demoBoardTasks;
+  const boardTasks = tasks || [];
 
   const taskStats = useMemo(() => {
     const todo = boardTasks.filter((task) => task.status === 'To Do').length;
@@ -263,10 +261,7 @@ export default function TasksPage() {
   }, [boardTasks]);
 
   const persistTaskStatus = async (taskId: string, status: TaskStatus) => {
-    if (!hasLiveTasks) {
-      setDemoBoardTasks((current) => current.map((task) => (task.id === taskId ? { ...task, status } : task)));
-      return;
-    }
+    if (!firestore) return;
 
     if (!firestore) return;
     const taskRef = doc(firestore, 'tasks', taskId);
@@ -307,25 +302,7 @@ export default function TasksPage() {
       return;
     }
 
-    if (!hasLiveTasks) {
-      if (updatedTask.id) {
-        setDemoBoardTasks((current) =>
-          current.map((task) => (task.id === updatedTask.id ? { ...task, ...(updatedTask as Task) } : task))
-        );
-      } else {
-        setDemoBoardTasks((current) => [
-          ...current,
-          {
-            ...(updatedTask as Task),
-            id: crypto.randomUUID(),
-            orgId: 'demo-org',
-            assignedBy: user?.uid || 'demo-user',
-            createdAt: new Date().toISOString(),
-          },
-        ]);
-      }
-      return;
-    }
+    if (!firestore) return;
 
     if (!firestore) return;
 
@@ -358,8 +335,8 @@ export default function TasksPage() {
         }
       >
         <span className="glass-chip">{taskStats.total} active tasks</span>
-        <Badge variant={hasLiveTasks ? 'secondary' : 'outline'}>
-          {tasksLoading && !hasLiveTasks ? 'Syncing live tasks' : hasLiveTasks ? 'Live board connected' : 'Board loaded'}
+        <Badge variant={boardTasks.length > 0 ? 'secondary' : 'outline'}>
+          {tasksLoading ? 'Syncing live tasks' : boardTasks.length > 0 ? 'Live board connected' : 'Board ready'}
         </Badge>
       </PageHeader>
 

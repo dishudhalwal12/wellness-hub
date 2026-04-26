@@ -26,8 +26,8 @@ export default function DashboardPage() {
 
   const { data: patients, isLoading: patientsLoading } = useCollection<Patient>(patientsQuery);
 
-  const hasLivePatients = (patients?.length ?? 0) > 0;
-  const displayPatients = (hasLivePatients ? patients : demoPatients) as Patient[];
+  const displayPatients = (patients ?? []) as Patient[];
+  const hasPatients = displayPatients.length > 0;
 
   const dashboardStats = useMemo(() => {
     const totalRevenue = displayPatients.reduce((acc, patient) => acc + (patient.consultationFee || 0), 0);
@@ -43,7 +43,7 @@ export default function DashboardPage() {
     });
 
     const activePatients = displayPatients.filter((patient) => patient.status === 'Active').length;
-    const noShowRate = hasLivePatients ? 2.8 : 4.3;
+    const noShowRate = hasPatients ? 2.8 : 0;
 
     return {
       totalRevenue,
@@ -53,7 +53,7 @@ export default function DashboardPage() {
       noShowRate,
       revenueByMonth,
     };
-  }, [displayPatients, hasLivePatients]);
+  }, [displayPatients, hasPatients]);
 
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const overviewData = dashboardStats.revenueByMonth.map((total, index) => ({
@@ -61,7 +61,7 @@ export default function DashboardPage() {
     total,
   }));
 
-  const appointments: RecentAppointment[] = hasLivePatients
+  const appointments: RecentAppointment[] = hasPatients
     ? displayPatients.slice(0, 4).map((patient, index) => ({
         id: patient.id,
         patientName: patient.name,
@@ -75,7 +75,7 @@ export default function DashboardPage() {
         type: index % 2 === 0 ? 'In-person' : 'Video',
         room: index % 2 === 0 ? `Room ${index + 1}` : `Virtual Suite ${String.fromCharCode(65 + index)}`,
       }))
-    : demoAppointments;
+    : [];
 
   return (
     <div className="space-y-6">
@@ -86,8 +86,8 @@ export default function DashboardPage() {
       >
         <span className="glass-chip">{dashboardStats.activePatients} active patients</span>
         <span className="glass-chip">{appointments.length} appointments on deck</span>
-        <Badge variant={hasLivePatients ? 'secondary' : 'outline'}>
-          {patientsLoading && !hasLivePatients ? 'Syncing live data' : hasLivePatients ? 'Live data connected' : 'Activity loaded'}
+        <Badge variant={hasPatients ? 'secondary' : 'outline'}>
+          {patientsLoading ? 'Syncing live data' : hasPatients ? 'Live data connected' : 'Dashboard ready'}
         </Badge>
       </PageHeader>
 

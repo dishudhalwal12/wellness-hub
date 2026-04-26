@@ -11,10 +11,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { demoNoteDraft } from '@/lib/demo-data';
 
 export default function NotesPage() {
-  const [subjective, setSubjective] = useState(demoNoteDraft.subjective);
-  const [objective, setObjective] = useState(demoNoteDraft.objective);
-  const [assessment, setAssessment] = useState(demoNoteDraft.assessment);
-  const [plan, setPlan] = useState(demoNoteDraft.plan);
+  const [subjective, setSubjective] = useState("");
+  const [objective, setObjective] = useState("");
+  const [assessment, setAssessment] = useState("");
+  const [plan, setPlan] = useState("");
 
   return (
     <div className="space-y-6">
@@ -29,7 +29,7 @@ export default function NotesPage() {
           </Button>
         }
       >
-        <span className="glass-chip">Patient: {demoNoteDraft.patient}</span>
+        <span className="glass-chip">Patient: Not Selected</span>
         <Badge variant="outline">AI draft assist loaded</Badge>
       </PageHeader>
 
@@ -38,7 +38,7 @@ export default function NotesPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><FilePenLine className="h-5 w-5 text-primary" /> Progress Note</CardTitle>
-              <CardDescription>Patient: {demoNoteDraft.patient} · DOB: {demoNoteDraft.dob}</CardDescription>
+              <CardDescription>Start documenting a new patient visit.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="grid gap-2">
@@ -89,17 +89,9 @@ export default function NotesPage() {
               <CardDescription>Live-looking suggestions based on the current patient and note context.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Suggested Assessment</h4>
-                <div className="rounded-[20px] border border-border/70 bg-white/70 p-4 text-sm leading-7">
-                  <div className="whitespace-pre-wrap">{demoNoteDraft.suggestedAssessment}</div>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Suggested Plan</h4>
-                <div className="rounded-[20px] border border-border/70 bg-white/70 p-4 text-sm leading-7">
-                  <div className="whitespace-pre-wrap">{demoNoteDraft.suggestedPlan}</div>
-                </div>
+              <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                <Bot className="mb-4 h-12 w-12 opacity-20" />
+                <p>AI suggestions will appear here as you begin documenting the patient visit.</p>
               </div>
             </CardContent>
             <CardFooter className="flex-col items-stretch gap-2">

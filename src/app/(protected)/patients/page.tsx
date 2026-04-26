@@ -228,8 +228,8 @@ export default function PatientsPage() {
         });
     }, [error, toast]);
 
-    const hasLivePatients = (patients?.length ?? 0) > 0;
-    const displayPatients = (hasLivePatients ? patients : demoPatients) as Patient[];
+    const displayPatients = (patients ?? []) as Patient[];
+    const hasPatients = displayPatients.length > 0;
 
     const patientStats = useMemo(() => {
         const active = displayPatients.filter((patient) => patient.status === 'Active').length;
@@ -266,8 +266,8 @@ export default function PatientsPage() {
                 }
             >
                 <span className="glass-chip">{displayPatients.length} visible patient records</span>
-                <Badge variant={hasLivePatients ? 'secondary' : 'outline'}>
-                    {patientsLoading && !hasLivePatients ? 'Syncing live roster' : hasLivePatients ? 'Live roster connected' : 'Roster loaded'}
+                <Badge variant={hasPatients ? 'secondary' : 'outline'}>
+                    {patientsLoading ? 'Syncing live roster' : hasPatients ? 'Live roster connected' : 'Roster ready'}
                 </Badge>
             </PageHeader>
 

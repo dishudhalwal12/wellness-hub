@@ -180,7 +180,7 @@ function ViewTaskDialog({
 }
 
 export default function StaffTasksPage() {
-  const [tasks, setTasks] = useState<Task[]>(demoStaffTasks as Task[]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [draggingOver, setDraggingOver] = useState<TaskStatus | null>(null);
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);

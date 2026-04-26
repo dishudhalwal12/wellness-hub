@@ -22,7 +22,7 @@ type TimePeriod = 'daily' | 'weekly';
 
 export default function ReportsPage() {
     const [timePeriod, setTimePeriod] = useState<TimePeriod>('weekly');
-    const [report, setReport] = useState<string>(demoPracticeReport);
+    const [report, setReport] = useState<string>("");
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
     const { profile } = useUser();
@@ -40,9 +40,9 @@ export default function ReportsPage() {
     }, [firestore, profile?.orgId]);
     const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(tasksQuery);
 
-    const displayPatients = (patients?.length ? patients : demoPatients) as Patient[];
-    const displayTasks = (tasks?.length ? tasks : demoTasks) as Task[];
-    const hasLiveData = (patients?.length ?? 0) > 0 || (tasks?.length ?? 0) > 0;
+    const displayPatients = (patients ?? []) as Patient[];
+    const displayTasks = (tasks ?? []) as Task[];
+    const hasData = displayPatients.length > 0 || displayTasks.length > 0;
 
     const stats = useMemo(() => {
         const totalRevenue = displayPatients.reduce((sum, patient) => sum + (patient.consultationFee || 0), 0);
@@ -105,8 +105,8 @@ export default function ReportsPage() {
                 }
             >
                 <span className="glass-chip">{timePeriod === 'weekly' ? 'Weekly lens' : 'Daily lens'}</span>
-                <Badge variant={hasLiveData ? 'secondary' : 'outline'}>
-                    {patientsLoading || tasksLoading ? 'Syncing clinic data' : hasLiveData ? 'Live operational data' : 'Insights loaded'}
+                <Badge variant={hasData ? 'secondary' : 'outline'}>
+                    {patientsLoading || tasksLoading ? 'Syncing clinic data' : hasData ? 'Live operational data' : 'Report center ready'}
                 </Badge>
             </PageHeader>
 

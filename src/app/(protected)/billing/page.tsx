@@ -17,7 +17,7 @@ import { demoBillingResult } from "@/lib/demo-data";
 export default function BillingPage() {
     const [visitNotes, setVisitNotes] = useState("Patient is a 58-year-old male with a history of hypertension and type 2 diabetes, presenting for a 3-month follow-up. Reports occasional headaches and fatigue. BP is 145/90, and recent A1c was 7.8%. Physical exam is otherwise unremarkable. Assessment: Uncontrolled hypertension, poorly controlled type 2 diabetes.");
     const [isLoading, setIsLoading] = useState(false);
-    const [result, setResult] = useState<CodingAssistanceOutput | null>(demoBillingResult);
+    const [result, setResult] = useState<CodingAssistanceOutput | null>(null);
     const { toast } = useToast();
 
     const confidenceSummary = useMemo(() => {

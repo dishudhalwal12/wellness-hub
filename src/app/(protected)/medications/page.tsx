@@ -36,10 +36,9 @@ export default function MedicationsPage() {
       const storedMeds = localStorage.getItem(storageKey);
       if (storedMeds) {
         setMedications(JSON.parse(storedMeds));
-        return;
+      } else {
+        setMedications([]);
       }
-
-      setMedications(getSeedMedications(user.uid));
     } catch (error) {
       console.error('Failed to load medications from local storage:', error);
       toast({

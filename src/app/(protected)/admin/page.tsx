@@ -40,7 +40,7 @@ export default function AdminPage() {
     const { user, profile } = useUser();
     const firestore = useFirestore();
     const [isCreatingInvite, setIsCreatingInvite] = React.useState(false);
-    const [localInviteCodes, setLocalInviteCodes] = React.useState<Invite[]>(demoInviteCodes);
+    const [localInviteCodes, setLocalInviteCodes] = React.useState<Invite[]>([]);
 
     const invitesQuery = useMemoFirebase(() => {
         if (!firestore || !profile?.orgId) return null;
@@ -48,8 +48,8 @@ export default function AdminPage() {
     }, [firestore, profile?.orgId]);
 
     const { data: inviteCodes, isLoading: invitesLoading } = useCollection<Invite>(invitesQuery);
-    const displayInvites = inviteCodes?.length ? inviteCodes : localInviteCodes;
-    const hasLiveInvites = (inviteCodes?.length ?? 0) > 0;
+    const displayInvites = inviteCodes || localInviteCodes;
+    const hasInvites = displayInvites.length > 0;
 
     const handleCreateInvite = async () => {
         setIsCreatingInvite(true);
@@ -106,16 +106,16 @@ export default function AdminPage() {
                 }
             >
                 <span className="glass-chip">{displayInvites.length} active invite codes</span>
-                <Badge variant={hasLiveInvites ? 'secondary' : 'outline'}>
-                    {invitesLoading && !hasLiveInvites ? 'Syncing live admin data' : hasLiveInvites ? 'Live admin data' : 'Invite center loaded'}
+                <Badge variant={hasInvites ? 'secondary' : 'outline'}>
+                    {invitesLoading ? 'Syncing live admin data' : hasInvites ? 'Live admin data' : 'Admin center ready'}
                 </Badge>
             </PageHeader>
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <MetricCard
                     title="Team Members"
-                    value={demoMembers.length.toString()}
-                    description="A fuller member list gives the admin experience immediate credibility."
+                    value="1"
+                    description="The member list is currently showing active clinical and staff roles."
                     icon={UserCog}
                     trend="Org mapped"
                 />
@@ -191,28 +191,11 @@ export default function AdminPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {demoMembers.map((member) => (
-                                <TableRow key={member.id}>
-                                    <TableCell className="font-medium text-foreground">{member.name}</TableCell>
-                                    <TableCell><Badge variant={member.role === 'doctor' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
-                                    <TableCell><Badge variant={member.status === 'Active' ? 'secondary' : 'outline'}>{member.status}</Badge></TableCell>
-                                    <TableCell className="text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                    <span className="sr-only">Toggle menu</span>
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem>View Profile</DropdownMenuItem>
-                                                <DropdownMenuItem>Change Role</DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive">Remove Member</DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
+                            {(inviteCodes || []).length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground italic py-4">No team members found.</TableCell>
                                 </TableRow>
-                            ))}
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>
