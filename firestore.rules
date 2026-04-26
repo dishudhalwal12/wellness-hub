@@ -110,19 +110,15 @@ service cloud.firestore {
       // The code is the document ID, so this is a direct lookup.
       // Note: We don't check isOrgAdmin here because admins will use list queries
       // to see all invites, and new users won't have a user document yet during signup.
-      allow get: if isSignedIn() && inviteId == resource.data.code;
+      // A signed-in user may redeem a single invite by code.
+      allow get: if isSignedIn();
 
       // Admins can list invite documents.
-      allow list: if isSignedIn() && getUserRole() == 'admin';
+      allow list: if isSignedIn() && getUserRole() && getUserRole() == 'admin';
 
       // Any signed-in user can update an invite to increment usesCount.
-      // This is necessary for the invite redemption process.
-      // We only check critical fields to avoid issues with partial updates.
-      allow update: if isSignedIn()
-                    && inviteId == resource.data.code
-                    && request.resource.data.usesCount == resource.data.usesCount + 1
-                    && request.resource.data.orgId == resource.data.orgId
-                    && request.resource.data.code == resource.data.code;
+      allow update: if isSignedIn() 
+                    && request.resource.data.usesCount == resource.data.usesCount + 1;
 
       // No client-side deletes.
       allow delete: if false;
@@ -276,20 +272,8 @@ service cloud.firestore {
     // =================================
 
     match /users/{userId} {
-      // Wellness Hub: A user can create their own document
-      allow create: if isOwner(userId);
-      
-      // Event Management: Create with role validation
-      allow create: if isSignedIn()
-        && request.auth.uid == userId
-        && request.resource.data.uid == userId
-        && (request.resource.data.role == 'student' || request.resource.data.role == 'organizer');
-
-      // Wellness Hub: Own profile access
-      allow read, update, delete: if isOwner(userId);
-      
-      // Event Management: Own profile access
-      allow read, update: if isSignedIn() && request.auth.uid == userId;
+      // Allow users to create, read, update, and delete their own profile document.
+      allow create, read, update, delete: if isSignedIn() && request.auth.uid == userId;
       
       // Disallow listing all users for security.
       allow list: if false; 
