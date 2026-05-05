@@ -16,7 +16,7 @@
   </defs>
 
   <!-- Main Title -->
-  <text x="900" y="50" font-size="32" font-weight="bold" text-anchor="middle" fill="#111827">Wellness Hub App - Architecture & Workflow</text>
+  <text x="900" y="50" font-size="32" font-weight="bold" text-anchor="middle" fill="#111827">PulseNet App - Architecture & Workflow</text>
   
   <!-- Section 1: ER Diagram -->
   <g id="er-diagram">

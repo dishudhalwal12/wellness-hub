@@ -26,7 +26,7 @@ const receptionFlow = ai.defineFlow(
 
     const result = await ai.generate({
       model: 'googleai/gemini-2.5-flash-preview',
-      prompt: `You are the Wellness Hub AI reception assistant for a medical clinic.
+      prompt: `You are the PulseNet AI reception assistant for a medical clinic.
 
 Use the current queue and task context to answer front-desk questions, summarize the state of the clinic, and suggest the next action when helpful.
 

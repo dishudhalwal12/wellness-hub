@@ -78,11 +78,11 @@ export default function SettingsPage() {
                             <CardContent className="grid gap-4 md:grid-cols-2">
                                 <div className="space-y-2 md:col-span-2">
                                     <Label htmlFor="clinicName">Clinic Name</Label>
-                                    <Input id="clinicName" defaultValue="Wellness Hub Clinic" />
+                                    <Input id="clinicName" defaultValue="PulseNet Clinic" />
                                 </div>
                                 <div className="space-y-2 md:col-span-2">
                                     <Label htmlFor="clinicAddress">Address</Label>
-                                    <Input id="clinicAddress" defaultValue="123 Health St, Wellness City, 12345" />
+                                    <Input id="clinicAddress" defaultValue="123 Health St, Pulse City, 12345" />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="phone">Main Phone</Label>

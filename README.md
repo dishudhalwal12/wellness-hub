@@ -1,4 +1,4 @@
-# Wellness Hub: Your AI-Powered Clinical Copilot
+# PulseNet: Your AI-Powered Clinical Copilot
 
 [![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
@@ -7,7 +7,7 @@
 [![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
 [![Google Gemini](https://img.shields.io/badge/Google_Gemini-8E44AD?style=for-the-badge&logo=google-gemini&logoColor=white)](https://ai.google.dev/)
 
-**Wellness Hub** is a state-of-the-art, AI-powered clinical operations platform designed to act as a **copilot for doctors**. Our vision is to empower private practitioners by automating administrative burdens, amplifying diagnostic capabilities, and streamlining every facet of clinic management. We handle the operational complexities so you can focus on what truly matters: your patients.
+**PulseNet** is a state-of-the-art, AI-powered clinical operations platform designed to act as a **copilot for doctors**. Our vision is to empower private practitioners by automating administrative burdens, amplifying diagnostic capabilities, and streamlining every facet of clinic management. We handle the operational complexities so you can focus on what truly matters: your patients.
 
 ## ✨ Features
 
@@ -34,8 +34,8 @@
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/dishudhalwal12/wellness-hub.git
-    cd wellness-hub
+    git clone https://github.com/dishudhalwal12/pulsenet.git
+    cd pulsenet
     ```
 
 2.  **Install dependencies:**

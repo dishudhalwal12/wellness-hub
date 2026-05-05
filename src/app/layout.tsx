@@ -7,7 +7,7 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
-  title: 'Wellness Hub',
+  title: 'PulseNet',
   description: 'An AI-powered clinical operations platform',
 };
 

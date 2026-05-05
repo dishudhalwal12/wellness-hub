@@ -13,22 +13,14 @@ import { Stethoscope, Loader2, Eye, EyeOff, Building, UserPlus } from 'lucide-re
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useFirestore, useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, deleteUser, type User } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, deleteUser, type User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { processNewUser, type SignupFormData } from '@/firebase/user-actions';
 
 
-const GoogleIcon = () => (
-    <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-        <path fill="none" d="M1 1h22v22H1z" />
-    </svg>
-);
+
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -70,8 +62,7 @@ export default function LoginPage() {
   const [onboardingType, setOnboardingType] = useState<'private' | 'hospital' | 'invite'>('private');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [googleUserForOnboarding, setGoogleUserForOnboarding] = useState<User | null>(null);
+
   const { toast } = useToast();
   const auth = useAuth();
   const firestore = useFirestore();
@@ -97,7 +88,7 @@ export default function LoginPage() {
       // User is already logged in and has a profile, go to dashboard
       const dashboardPath = userProfile.role === 'admin' ? '/admin' : userProfile.role === 'staff' ? '/staff-tasks' : '/';
       router.replace(dashboardPath);
-    } else if (authUser && !userProfile && !googleUserForOnboarding) {
+    } else if (authUser && !userProfile) {
       // User is logged in but has no profile (e.g. refreshed during onboarding)
       // Set to signup mode to allow completing registration
       setFormType('signup');
@@ -112,7 +103,7 @@ export default function LoginPage() {
         description: "Please finish setting up your account to continue.",
       });
     }
-  }, [authUser, userProfile, isUserLoading, router, reset, toast, googleUserForOnboarding]);
+  }, [authUser, userProfile, isUserLoading, router, reset, toast]);
 
   React.useEffect(() => {
     setOnboardingType(watchedOnboardingType);
@@ -171,26 +162,19 @@ export default function LoginPage() {
         
         let user: User;
 
-        if (googleUserForOnboarding) {
-            user = googleUserForOnboarding;
-            // After submitting the form, clear the onboarding state.
-            // The AppShellController will then handle the redirect.
-            setGoogleUserForOnboarding(null); 
-        } else {
-            if (!signupData.password) {
-              throw new Error('Password is required to create an account.');
-            }
-            try {
-              const userCredential = await createUserWithEmailAndPassword(auth, signupData.email, signupData.password);
-              user = userCredential.user;
-            } catch (signupError: any) {
-              if (signupError?.code === 'auth/email-already-in-use') {
-                const existingCredential = await signInWithEmailAndPassword(auth, signupData.email, signupData.password);
-                user = existingCredential.user;
-              } else {
-                throw signupError;
-              }
-            }
+        if (!signupData.password) {
+          throw new Error('Password is required to create an account.');
+        }
+        try {
+          const userCredential = await createUserWithEmailAndPassword(auth, signupData.email, signupData.password);
+          user = userCredential.user;
+        } catch (signupError: any) {
+          if (signupError?.code === 'auth/email-already-in-use') {
+            const existingCredential = await signInWithEmailAndPassword(auth, signupData.email, signupData.password);
+            user = existingCredential.user;
+          } else {
+            throw signupError;
+          }
         }
         
         const { password: _password, ...signupPayload } = signupData;
@@ -200,11 +184,7 @@ export default function LoginPage() {
       console.error("Authentication/Signup Error:", error);
       if (formType === 'signup' && auth.currentUser) {
         try {
-          if (!googleUserForOnboarding) {
-            await deleteUser(auth.currentUser);
-          } else {
-            await signOut(auth);
-          }
+          await deleteUser(auth.currentUser);
         } catch (cleanupError) {
           console.error("Signup cleanup error:", cleanupError);
           await signOut(auth);
@@ -216,49 +196,9 @@ export default function LoginPage() {
     // On success, the loading state persists and the AppShellController handles the redirect.
   };
   
-  const handleGoogleSignIn = async () => {
-    setIsGoogleLoading(true);
-    const provider = new GoogleAuthProvider();
-    try {
-        const userCredential = await signInWithPopup(auth, provider);
-        const user = userCredential.user;
 
-        const userDocRef = doc(firestore, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
 
-        if (!userDoc.exists()) {
-            // This is a new user, show them the onboarding form
-            setGoogleUserForOnboarding(user);
-            setFormType('signup');
-            reset({ // Pre-fill form with Google data
-                fullName: user.displayName || '',
-                email: user.email || '',
-                phoneNumber: user.phoneNumber || '',
-                onboardingType: 'private'
-            });
-            toast({
-                title: `Welcome, ${user.displayName || 'New User'}!`,
-                description: "Please complete your registration.",
-            });
-        } else {
-            // Existing user, just log them in
-            toast({
-                title: "Welcome Back!",
-                description: "You have been successfully signed in.",
-            });
-            // The AppShellController will handle the redirect.
-        }
-    } catch (error: any) {
-        console.error("Google sign-in error:", error);
-        handleAuthError(error);
-    } finally {
-        setIsGoogleLoading(false);
-    }
-};
-
-  const currentTitle = googleUserForOnboarding ? `Complete your registration, ${googleUserForOnboarding.displayName?.split(' ')[0]}`
-                       : formType === 'login' ? 'Sign in to Wellness Hub'
-                       : 'Create your Wellness Hub account';
+  const currentTitle = formType === 'login' ? 'Sign in to PulseNet' : 'Create your PulseNet account';
 
   if (isUserLoading) {
     return (
@@ -281,18 +221,14 @@ export default function LoginPage() {
               {currentTitle}
             </h2>
             <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-              {!googleUserForOnboarding && (
-                <>
                   Or{' '}
                   <button
                     onClick={() => setFormType(formType === 'login' ? 'signup' : 'login')}
                     className="font-medium text-red-600 hover:text-red-700"
-                    disabled={isLoading || isGoogleLoading}
+                    disabled={isLoading}
                   >
                     {formType === 'login' ? 'create an account' : 'sign in to your account'}
                   </button>
-                </>
-              )}
             </p>
           </div>
           <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
@@ -342,12 +278,12 @@ export default function LoginPage() {
                     <>
                       <div className="space-y-2">
                         <Label htmlFor="orgName">Clinic/Hospital Name</Label>
-                        <Input id="orgName" {...register("orgName")} placeholder="Sunrise Wellness Clinic" />
+                        <Input id="orgName" {...register("orgName")} placeholder="Sunrise PulseNet Clinic" />
                         {errors.orgName && <p className="text-destructive text-xs">{`${errors.orgName.message}`}</p>}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="orgAddress">Clinic/Hospital Address</Label>
-                        <Input id="orgAddress" {...register("orgAddress")} placeholder="123 Health St, Wellness City" />
+                        <Input id="orgAddress" {...register("orgAddress")} placeholder="123 Health St, Pulse City" />
                          {errors.orgAddress && <p className="text-destructive text-xs">{`${errors.orgAddress.message}`}</p>}
                       </div>
                        <div className="space-y-2">
@@ -363,11 +299,11 @@ export default function LoginPage() {
                   )}
                 </>
               )}
-              { (formType === 'login' || !googleUserForOnboarding) && (
+              {(formType === 'login' || formType === 'signup') && (
                 <>
                 <div className="space-y-2">
                     <Label htmlFor="email">Email address</Label>
-                    <Input id="email" type="email" autoComplete="email" {...register("email")} placeholder="john.doe@example.com" disabled={!!googleUserForOnboarding}/>
+                    <Input id="email" type="email" autoComplete="email" {...register("email")} placeholder="john.doe@example.com" />
                     {errors.email && <p className="text-destructive text-xs">{`${errors.email.message}`}</p>}
                 </div>
                 <div className="relative space-y-2">
@@ -404,30 +340,12 @@ export default function LoginPage() {
             )}
 
             <div>
-              <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-                {(isLoading && !isGoogleLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {formType === 'login' ? 'Sign In' : 'Create Account'}
               </Button>
             </div>
-            {formType === 'login' && !googleUserForOnboarding && (
-            <>
-             <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-                </div>
-            </div>
-            <div>
-                 <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isLoading || isGoogleLoading}>
-                    {isGoogleLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    <GoogleIcon />
-                    {formType === 'login' ? 'Sign in with Google' : 'Sign up with Google'}
-                </Button>
-            </div>
-            </>
-            )}
+
           </form>
         </div>
       </div>

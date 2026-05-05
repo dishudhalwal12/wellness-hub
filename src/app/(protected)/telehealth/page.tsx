@@ -182,7 +182,7 @@ function AINoteTaker() {
 }
 
 export default function TelehealthPage() {
-    const meetingUrl = "https://meet.jit.si/Wellness-Hub-Session-4d087e2b";
+    const meetingUrl = "https://meet.jit.si/PulseNet-Session-4d087e2b";
     const [callStarted, setCallStarted] = useState(false);
     const { toast } = useToast();
 

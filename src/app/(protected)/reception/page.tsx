@@ -228,7 +228,7 @@ export default function ReceptionPage() {
                                             )}
                                         >
                                             <p className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] opacity-80">
-                                                {message.role === 'ai' ? 'Wellness Hub AI' : 'You'}
+                                                {message.role === 'ai' ? 'PulseNet AI' : 'You'}
                                             </p>
                                             <p className="whitespace-pre-wrap">{message.text}</p>
                                         </div>

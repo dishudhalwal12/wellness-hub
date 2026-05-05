@@ -74,8 +74,8 @@ type Medication = {
   notes: string;
 };
 
-const DIAGNOSIS_STORAGE_KEY = 'wellness-hub-diagnoses';
-const MEDS_STORAGE_KEY = 'wellness-hub-medications';
+const DIAGNOSIS_STORAGE_KEY = 'pulsenet-diagnoses';
+const MEDS_STORAGE_KEY = 'pulsenet-medications';
 
 function PatientSummaryCard({ patient, patientId }: { patient: Patient | null, patientId: string }) {
     const [lastDiagnosis, setLastDiagnosis] = useState<DiagnosisOutput | null>(null);
@@ -619,12 +619,12 @@ export default function PatientProfilePage() {
     <div className="space-y-6">
        <PageHeader
         eyebrow="Patient Intelligence"
-        title={displayPatient.name}
+        title={displayPatient?.name || 'Loading Patient...'}
         description="A complete patient intelligence workspace with report analysis, AI reasoning, and follow-up Q&A that stays rich even before a live chart is selected."
        >
-        <span className="glass-chip">{displayPatient.visitType} visit</span>
-        <Badge variant={displayPatient.status === 'Active' ? 'secondary' : displayPatient.status === 'New' ? 'default' : 'outline'}>
-          {displayPatient.status}
+        <span className="glass-chip">{displayPatient?.visitType || 'Unknown'} visit</span>
+        <Badge variant={displayPatient?.status === 'Active' ? 'secondary' : displayPatient?.status === 'New' ? 'default' : 'outline'}>
+          {displayPatient?.status || 'Unknown'}
         </Badge>
         <Badge variant={isPatientLoading ? 'outline' : 'secondary'}>
           {isPatientLoading ? 'Syncing live chart' : 'Patient chart ready'}

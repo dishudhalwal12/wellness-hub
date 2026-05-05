@@ -77,7 +77,7 @@ export default function AppShellController({
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="ml-2 text-muted-foreground">Loading Wellness Hub...</p>
+        <p className="ml-2 text-muted-foreground">Loading PulseNet...</p>
       </div>
     );
   }

@@ -17,8 +17,8 @@ import type { Medication } from './types';
 
 const AddMedicationDialog = dynamic(() => import('./AddMedicationDialog'));
 
-const MEDS_STORAGE_KEY = 'wellness-hub-medications';
-const NOTIFIED_TODAY_KEY = 'wellness-hub-notified-today';
+const MEDS_STORAGE_KEY = 'pulsenet-medications';
+const NOTIFIED_TODAY_KEY = 'pulsenet-notified-today';
 
 export default function MedicationsPage() {
   const { user } = useUser();
