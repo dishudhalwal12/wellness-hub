@@ -339,11 +339,10 @@ function IntelligencePanel({
     };
 
     const handleSendMessage = async () => {
-        if (!chatInput.trim() || !activeDiagnosis) {
-            return;
-        }
+        const question = chatInput.trim();
+        if (!question || !activeDiagnosis) return;
 
-        const newUserMessage: ChatMessage = { role: 'user', parts: [{ text: chatInput }] };
+        const newUserMessage: ChatMessage = { role: 'user', parts: [{ text: question }] };
         const currentMessages = [...messages, newUserMessage];
         setMessages(currentMessages);
         setChatInput('');
@@ -352,7 +351,7 @@ function IntelligencePanel({
         try {
             const result = await askDiagnosticQuestion(
                 reportContent || "No specific report content provided.",
-                chatInput,
+                question,
                 currentMessages,
                 JSON.stringify(activeDiagnosis),
                 profile?.orgId || '',
