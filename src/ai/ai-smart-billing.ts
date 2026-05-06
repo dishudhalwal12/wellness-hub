@@ -9,8 +9,10 @@ export async function generateInvoice(input: {
   dateOfService: string;
   clinicName: string;
   providerName: string;
+  orgId?: string;
+  apiKey?: string;
 }) {
-  const model = await getGenerativeModel();
+  const model = await getGenerativeModel({ orgId: input.orgId, apiKey: input.apiKey });
 
   const prompt = `You are a professional medical coding and billing AI. Your expertise is in converting clinical consultation notes into accurate billing statements with appropriate CPT/ICD-10 codes.
 

@@ -2,8 +2,8 @@
 // src/ai/ai-smart-notes-drafting.ts
 import { getGenerativeModel } from '@/ai/google-genai';
 
-export async function aiSmartNotesDrafting({ patientData }: { patientData: string }) {
-    const model = await getGenerativeModel();
+export async function aiSmartNotesDrafting({ patientData, orgId, apiKey }: { patientData: string; orgId?: string; apiKey?: string }) {
+    const model = await getGenerativeModel({ orgId, apiKey });
 
     const prompt = `You are an elite AI medical documentation specialist. Your goal is to draft high-precision progress notes (SOAP) for a physician.
 

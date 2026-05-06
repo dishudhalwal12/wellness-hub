@@ -278,7 +278,9 @@ function IntelligencePanel({
         try {
             const result = await generatePrescription({
                 diagnosis: activeDiagnosis,
-                patientContext: "Patient is a 45-year-old male. No known drug allergies."
+                patientContext: "Patient is a 45-year-old male. No known drug allergies.",
+                orgId: profile?.orgId || '',
+                apiKey: orgApiKey,
             });
             
             setPrescription(result.prescriptionText);
@@ -303,8 +305,10 @@ function IntelligencePanel({
         if (!activeDiagnosis) return;
         setIsGeneratingNote(true);
         try {
-            const result = await aiSmartNotesDrafting({
-                patientData: JSON.stringify({ diagnosis: activeDiagnosis })
+            const result = await aiSmartNotesDrafting({ 
+                patientData: JSON.stringify(activeDiagnosis),
+                orgId: profile?.orgId || '',
+                apiKey: orgApiKey,
             });
             setSmartNote(result);
             toast({ title: "Smart Note Drafted", description: "AI has generated assessment and plan suggestions." });
@@ -323,7 +327,9 @@ function IntelligencePanel({
                 patientId: patientId,
                 dateOfService: new Date().toISOString().split('T')[0],
                 clinicName: profile.orgName || "PulseNet Clinic",
-                providerName: profile.name || "Attending Physician"
+                providerName: profile.name || "Attending Physician",
+                orgId: profile?.orgId || '',
+                apiKey: orgApiKey,
             });
             setInvoice(result);
             toast({ title: "Smart Invoice Generated", description: "AI has coded the visit and generated an invoice draft." });

@@ -10,8 +10,8 @@ const PrescriptionInputSchema = z.object({
 
 export type PrescriptionInput = z.infer<typeof PrescriptionInputSchema>;
 
-export async function generatePrescription(input: PrescriptionInput): Promise<{ prescriptionText: string }> {
-  const model = await getGenerativeModel();
+export async function generatePrescription(input: PrescriptionInput & { orgId?: string; apiKey?: string }): Promise<{ prescriptionText: string }> {
+  const model = await getGenerativeModel({ orgId: input.orgId, apiKey: input.apiKey });
   
   const prompt = `You are a world-class AI pharmacologist and clinical strategist. Your thought process for generating a prescription is a multi-layered synthesis of deep medical knowledge and practical wisdom. You operate like a high-speed detective mixed with a chess grandmaster.
 

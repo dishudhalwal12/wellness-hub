@@ -1,7 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Bot, FilePenLine, RefreshCcw, Save } from 'lucide-react';
+import { Bot, FilePenLine, Loader2, RefreshCcw, Save, Sparkles } from 'lucide-react';
+import { aiSmartNotesDrafting } from '@/ai/ai-smart-notes-drafting';
+import { useDoc, useFirestore, useUser } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import ReactMarkdown from 'react-markdown';
 
 import { PageHeader } from '@/components/app/ui';
 import { Badge } from '@/components/ui/badge';
@@ -11,10 +16,65 @@ import { Textarea } from '@/components/ui/textarea';
 import { demoNoteDraft } from '@/lib/demo-data';
 
 export default function NotesPage() {
-  const [subjective, setSubjective] = useState("");
-  const [objective, setObjective] = useState("");
+  const [subjective, setSubjective] = useState("Patient reports worsening headaches over the past 2 weeks, primarily in the frontal region. Describes it as a 'tight band' around the head. No aura, no nausea. Worse after long workdays. Improving slightly with better sleep quality but still persistent.");
+  const [objective, setObjective] = useState("Vital signs stable. BP 120/80. Neuro exam intact. Cranial nerves II-XII grossly normal. Tenderness noted on palpation of pericranial muscles. No focal deficits.");
   const [assessment, setAssessment] = useState("");
   const [plan, setPlan] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<{ assessmentSuggestion: string, planSuggestion: string } | null>(null);
+  
+  const { profile } = useUser();
+  const firestore = useFirestore();
+  const { data: orgData } = useDoc(profile?.orgId ? doc(firestore!, 'orgs', profile.orgId) : null);
+  const orgApiKey = orgData?.googleApiKey;
+  const { toast } = useToast();
+
+  const handleGenerateSuggestions = async () => {
+    if (!subjective.trim() && !objective.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Input Required',
+        description: 'Please enter subjective or objective notes before generating suggestions.',
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const patientData = JSON.stringify({ subjective, objective });
+      const result = await aiSmartNotesDrafting({ 
+        patientData,
+        orgId: profile?.orgId || '',
+        apiKey: orgApiKey
+      });
+      setSuggestions(result);
+      toast({
+        title: 'Suggestions Generated',
+        description: 'AI has analyzed your notes and generated suggestions.',
+      });
+    } catch (error) {
+      console.error("Failed to generate suggestions:", error);
+      toast({
+        variant: 'destructive',
+        title: 'AI Error',
+        description: 'Could not generate suggestions. Please check your API key.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleIncorporate = () => {
+    if (suggestions) {
+      setAssessment(suggestions.assessmentSuggestion);
+      setPlan(suggestions.planSuggestion);
+      setSuggestions(null);
+      toast({
+        title: 'Suggestions Incorporated',
+        description: 'Assessment and Plan have been updated.',
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -89,16 +149,48 @@ export default function NotesPage() {
               <CardDescription>Live-looking suggestions based on the current patient and note context.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-                <Bot className="mb-4 h-12 w-12 opacity-20" />
-                <p>AI suggestions will appear here as you begin documenting the patient visit.</p>
-              </div>
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                  <Loader2 className="mb-4 h-12 w-12 animate-spin text-primary" />
+                  <p>AI is analyzing your notes and drafting clinical suggestions...</p>
+                </div>
+              ) : suggestions ? (
+                <div className="space-y-4">
+                  <div className="rounded-[22px] border border-primary/20 bg-primary/5 p-4 text-sm">
+                    <h4 className="flex items-center gap-2 font-semibold text-primary"><Sparkles className="h-4 w-4" /> Assessment Suggestion</h4>
+                    <div className="mt-2 prose prose-sm max-w-none text-muted-foreground">
+                      <ReactMarkdown>{suggestions.assessmentSuggestion}</ReactMarkdown>
+                    </div>
+                  </div>
+                  <div className="rounded-[22px] border border-primary/20 bg-primary/5 p-4 text-sm">
+                    <h4 className="flex items-center gap-2 font-semibold text-primary"><Sparkles className="h-4 w-4" /> Plan Suggestion</h4>
+                    <div className="mt-2 prose prose-sm max-w-none text-muted-foreground">
+                      <ReactMarkdown>{suggestions.planSuggestion}</ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                  <Bot className="mb-4 h-12 w-12 opacity-20" />
+                  <p>AI suggestions will appear here as you begin documenting the patient visit.</p>
+                </div>
+              )}
             </CardContent>
             <CardFooter className="flex-col items-stretch gap-2">
-              <Button variant="secondary">Incorporate Suggestions</Button>
-              <Button variant="outline">
-                <RefreshCcw className="mr-2 h-4 w-4" />
-                Regenerate
+              <Button 
+                variant="secondary" 
+                disabled={!suggestions || isLoading}
+                onClick={handleIncorporate}
+              >
+                Incorporate Suggestions
+              </Button>
+              <Button 
+                variant="outline" 
+                disabled={isLoading}
+                onClick={handleGenerateSuggestions}
+              >
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
+                {suggestions ? 'Regenerate' : 'Generate Suggestions'}
               </Button>
             </CardFooter>
           </Card>
