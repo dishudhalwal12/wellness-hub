@@ -235,36 +235,33 @@ function IntelligencePanel({
         }
     }, [messages, isReplying]);
     
-    useEffect(() => {
-        if (diagnosis && firestore && profile?.orgId) {
-             const saveDiagnosis = async () => {
-                try {
-                    const diagnosisId = crypto.randomUUID();
-                    await setDoc(doc(firestore, 'diagnoses', diagnosisId), {
-                        id: diagnosisId,
-                        patientId: patientId,
-                        orgId: profile.orgId,
-                        diagnosis: diagnosis,
-                        createdAt: new Date().toISOString(),
-                    });
-                    
-                    // Also keep in local storage for instant fallback
-                    const storedDiagnoses: StoredDiagnosis[] = JSON.parse(localStorage.getItem(`${DIAGNOSIS_STORAGE_KEY}-${patientId}`) || '[]');
-                    const newDiagnosis: StoredDiagnosis = {
-                        id: diagnosisId,
-                        patientId: patientId,
-                        diagnosis: diagnosis,
-                        createdAt: new Date().toISOString(),
-                    };
-                    const updatedDiagnoses = [newDiagnosis, ...storedDiagnoses].slice(0, 5);
-                    localStorage.setItem(`${DIAGNOSIS_STORAGE_KEY}-${patientId}`, JSON.stringify(updatedDiagnoses));
-                } catch (error) {
-                    console.error("Failed to save diagnosis to Firestore:", error);
-                }
-             };
-             saveDiagnosis();
+    const activeDiagnosis = diagnosis ?? previewDiagnosis;
+
+    const saveDiagnosisToDb = async (diagnosisData: DiagnosisOutput) => {
+        if (!firestore || !profile?.orgId) return;
+        try {
+            const diagnosisId = crypto.randomUUID();
+            await setDoc(doc(firestore, 'diagnoses', diagnosisId), {
+                id: diagnosisId,
+                patientId: patientId,
+                orgId: profile.orgId,
+                diagnosis: diagnosisData,
+                createdAt: new Date().toISOString(),
+            });
+            
+            const storedDiagnoses: StoredDiagnosis[] = JSON.parse(localStorage.getItem(`${DIAGNOSIS_STORAGE_KEY}-${patientId}`) || '[]');
+            const newDiagnosis: StoredDiagnosis = {
+                id: diagnosisId,
+                patientId: patientId,
+                diagnosis: diagnosisData,
+                createdAt: new Date().toISOString(),
+            };
+            const updatedDiagnoses = [newDiagnosis, ...storedDiagnoses].slice(0, 5);
+            localStorage.setItem(`${DIAGNOSIS_STORAGE_KEY}-${patientId}`, JSON.stringify(updatedDiagnoses));
+        } catch (error) {
+            console.error("Failed to save diagnosis:", error);
         }
-    }, [diagnosis, patientId, firestore, profile?.orgId]);
+    };
 
     const getPriorityVariant = (priority: 'High' | 'Medium' | 'Low') => {
         switch (priority) {
@@ -666,10 +663,10 @@ export default function PatientProfilePage() {
   const { data: latestDiagnoses } = useCollection<any>(diagnosesQuery);
   
   useEffect(() => {
-      if (latestDiagnoses?.[0]?.diagnosis) {
+      if (latestDiagnoses?.[0]?.diagnosis && !diagnosis && !isDiagnosing) {
           setDiagnosis(latestDiagnoses[0].diagnosis);
       }
-  }, [latestDiagnoses]);
+  }, [latestDiagnoses, diagnosis, isDiagnosing]);
 
   const patientDocRef = useMemoFirebase(() => {
       if (!firestore || !patientId || isDemoPatient) return null;
@@ -745,8 +742,8 @@ export default function PatientProfilePage() {
     setDiagnosis(null);
     try {
         const result = await diagnoseHealthReport(activeReportContent, profile?.orgId || '', orgApiKey);
-        setDiagnosis({
-            summary: result.summary ?? "No diagnosis summary was returned.",
+        const finalDiagnosis: DiagnosisOutput = {
+            summary: Array.isArray(result.summary) ? result.summary.join('\n\n') : (result.summary ?? "No diagnosis summary was returned."),
             keyAbnormalities: result.keyAbnormalities ?? [],
             potentialDiagnoses: (result.potentialDiagnoses ?? []).map((item) => ({
                 diagnosis: item.diagnosis,
@@ -760,8 +757,23 @@ export default function PatientProfilePage() {
                     : "Medium",
             })),
             differentialDiagnosis: result.differentialDiagnosis ?? [],
-            pathophysiologyInsights: result.pathophysiologyInsights,
-        });
+            pathophysiologyInsights: Array.isArray(result.pathophysiologyInsights) ? result.pathophysiologyInsights.join('\n\n') : (result.pathophysiologyInsights || ""),
+        };
+        
+        setDiagnosis(finalDiagnosis);
+
+        // Save to Firestore
+        if (firestore && profile?.orgId) {
+            const diagnosisId = crypto.randomUUID();
+            await setDoc(doc(firestore, 'diagnoses', diagnosisId), {
+                id: diagnosisId,
+                patientId: patientId,
+                orgId: profile.orgId,
+                diagnosis: finalDiagnosis,
+                createdAt: new Date().toISOString(),
+            });
+        }
+
     } catch (error) {
         console.error("Diagnosis failed:", error);
         toast({
