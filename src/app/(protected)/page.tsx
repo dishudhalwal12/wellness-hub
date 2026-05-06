@@ -16,13 +16,13 @@ import { demoAppointments, demoPatients } from '@/lib/demo-data';
 import type { Patient } from './patients/page';
 
 export default function DashboardPage() {
-  const { user, profile } = useUser();
+  const { user, profile, isUserLoading } = useUser();
   const firestore = useFirestore();
 
   const patientsQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.orgId) return null;
+    if (!firestore || !profile?.orgId || !user || isUserLoading) return null;
     return query(collection(firestore, 'patients'), where('orgId', '==', profile.orgId));
-  }, [firestore, profile?.orgId]);
+  }, [firestore, profile?.orgId, user, isUserLoading]);
 
   const { data: patients, isLoading: patientsLoading } = useCollection<Patient>(patientsQuery);
 

@@ -25,19 +25,19 @@ export default function ReportsPage() {
     const [report, setReport] = useState<string>("");
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
-    const { profile } = useUser();
+    const { user, profile, isUserLoading } = useUser();
     const firestore = useFirestore();
 
     const patientsQuery = useMemoFirebase(() => {
-        if (!firestore || !profile?.orgId) return null;
+        if (!firestore || !profile?.orgId || !user || isUserLoading) return null;
         return query(collection(firestore, 'patients'), where('orgId', '==', profile.orgId));
-    }, [firestore, profile?.orgId]);
+    }, [firestore, profile?.orgId, user, isUserLoading]);
     const { data: patients, isLoading: patientsLoading } = useCollection<Patient>(patientsQuery);
 
     const tasksQuery = useMemoFirebase(() => {
-        if (!firestore || !profile?.orgId) return null;
+        if (!firestore || !profile?.orgId || !user || isUserLoading) return null;
         return query(collection(firestore, 'tasks'), where('orgId', '==', profile.orgId));
-    }, [firestore, profile?.orgId]);
+    }, [firestore, profile?.orgId, user, isUserLoading]);
     const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(tasksQuery);
 
     const displayPatients = (patients ?? []) as Patient[];

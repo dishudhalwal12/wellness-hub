@@ -207,26 +207,34 @@ const generateWhatsAppMessage = (patient: Patient, clinicName?: string) => {
 
 
 export default function PatientsPage() {
-    const { profile, isUserLoading } = useUser();
+    const { user, profile, isUserLoading } = useUser();
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
 
     const patientsQuery = useMemoFirebase(() => {
-        if (!firestore || !profile?.orgId) return null;
+        if (!firestore || !profile?.orgId || !user || isUserLoading) return null;
         return query(collection(firestore, 'patients'), where('orgId', '==', profile.orgId));
-    }, [firestore, profile?.orgId]);
+    }, [firestore, profile?.orgId, user, isUserLoading]);
 
     const { data: patients, isLoading: patientsLoading, error } = useCollection<Patient>(patientsQuery);
 
     useEffect(() => {
         if (!error) return;
+        
+        // Suppress permission error toasts during transient states (like onboarding)
+        // where the orgId might be temporarily missing or the profile is still syncing.
+        if (error.message.includes('permission') && !profile?.orgId) {
+            console.warn("Suppressing transient permission error while profile is incomplete.");
+            return;
+        }
+
         toast({
             variant: 'destructive',
             title: 'Error loading patients',
             description: error.message,
         });
-    }, [error, toast]);
+    }, [error, toast, profile?.orgId]);
 
     const displayPatients = (patients ?? []) as Patient[];
     const hasPatients = displayPatients.length > 0;

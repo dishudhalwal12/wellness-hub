@@ -37,15 +37,15 @@ function buildLocalInvite(roleAllowed: 'doctor' | 'staff'): Invite {
 
 export default function AdminPage() {
     const { toast } = useToast();
-    const { user, profile } = useUser();
+    const { user, profile, isUserLoading } = useUser();
     const firestore = useFirestore();
     const [isCreatingInvite, setIsCreatingInvite] = React.useState(false);
     const [localInviteCodes, setLocalInviteCodes] = React.useState<Invite[]>([]);
 
     const invitesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile?.orgId) return null;
+        if (!firestore || !profile?.orgId || !user || isUserLoading) return null;
         return query(collection(firestore, 'invites'), where('orgId', '==', profile.orgId));
-    }, [firestore, profile?.orgId]);
+    }, [firestore, profile?.orgId, user, isUserLoading]);
 
     const { data: inviteCodes, isLoading: invitesLoading } = useCollection<Invite>(invitesQuery);
     const displayInvites = inviteCodes || localInviteCodes;

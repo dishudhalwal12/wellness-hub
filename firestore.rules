@@ -30,19 +30,24 @@ service cloud.firestore {
     }
 
     function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data 
+        : null;
     }
 
     function getUserRole() {
-      return getUserData().role;
+      let data = getUserData();
+      return data != null && 'role' in data ? data.role : null;
     }
 
     function getUserOrgId() {
-      return getUserData().orgId;
+      let data = getUserData();
+      return data != null && 'orgId' in data ? data.orgId : null;
     }
 
     function isOrgMember(orgId) {
-      return isSignedIn() && getUserOrgId() == orgId;
+      let userOrgId = getUserOrgId();
+      return isSignedIn() && userOrgId != null && userOrgId == orgId;
     }
 
     function isOrgAdmin(orgId) {
@@ -138,7 +143,7 @@ service cloud.firestore {
       allow read: if isOrgMember(resource.data.orgId);
       // A user can list patients if their client-side query is correctly filtered by their orgId.
       // This rule ensures the user belongs to an org before attempting to list patients.
-      allow list: if isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      allow list: if isSignedIn() && (isOrgMember(request.query.filters.orgId) || exists(/databases/$(database)/documents/users/$(request.auth.uid)));
       // Writes are allowed if the user is part of the org and the data's orgId matches.
       allow write: if isOrgMember(request.resource.data.orgId);
     }

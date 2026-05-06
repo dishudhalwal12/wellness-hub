@@ -142,19 +142,11 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                 let profileData = userDoc.exists() ? userDoc.data() as UserProfile : null;
 
                 if (!profileData) {
-                const fallbackProfile: UserProfile = cachedProfile ?? {};
-                const profilePayload = omitUndefinedFields({
-                        ...fallbackProfile,
-                        name: fallbackProfile.name || firebaseUser.displayName || firebaseUser.email || 'User',
-                        email: fallbackProfile.email || firebaseUser.email || '',
-                        role: fallbackProfile.role || 'doctor',
-                        orgId: fallbackProfile.orgId,
-                        orgName: fallbackProfile.orgName,
-                });
-
-                profileData = profilePayload as UserProfile;
-
-                await setDoc(userDocRef, profilePayload, { merge: true });
+                    // If no profile exists in Firestore, we don't create a "fallback" one here
+                    // to avoid race conditions with the registration flow.
+                    // The AppShellController will redirect the user to the login/signup page.
+                    setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null, profile: null });
+                    return;
                 }
                 
         // Also fetch org name if orgId exists. This lookup is best-effort:
