@@ -80,7 +80,10 @@ export function useCollection<T = any>(
         for (const doc of snapshot.docs) {
           results.push({ ...(doc.data() as T), id: doc.id });
         }
-        setData(results);
+        setData(prev => {
+          if (JSON.stringify(prev) === JSON.stringify(results)) return prev;
+          return results;
+        });
         setError(null);
         setIsLoading(false);
       },

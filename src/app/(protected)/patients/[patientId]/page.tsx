@@ -235,8 +235,6 @@ function IntelligencePanel({
         }
     }, [messages, isReplying]);
     
-    const activeDiagnosis = diagnosis ?? previewDiagnosis;
-
     const saveDiagnosisToDb = async (diagnosisData: DiagnosisOutput) => {
         if (!firestore || !profile?.orgId) return;
         try {
