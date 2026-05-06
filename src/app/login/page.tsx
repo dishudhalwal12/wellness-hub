@@ -40,18 +40,13 @@ const privateClinicSchema = baseSignupSchema.extend({
   orgAddress: z.string().min(1, 'Address is required'),
 });
 
-const hospitalSchema = baseSignupSchema.extend({
-    onboardingType: z.literal('hospital'),
-    orgName: z.string().min(1, 'Hospital name is required'),
-    orgAddress: z.string().min(1, 'Address is required'),
-});
 
 const inviteSchema = baseSignupSchema.extend({
   onboardingType: z.literal('invite'),
   inviteCode: z.string().min(6, 'Invite code is required'),
 });
 
-const signupSchema = z.discriminatedUnion("onboardingType", [privateClinicSchema, hospitalSchema, inviteSchema]);
+const signupSchema = z.discriminatedUnion("onboardingType", [privateClinicSchema, inviteSchema]);
 
 type LoginFormData = z.infer<typeof loginSchema>;
 type SignupFormValues = z.infer<typeof signupSchema>;
@@ -59,7 +54,7 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function LoginPage() {
   const [formType, setFormType] = useState<'login' | 'signup'>('login');
-  const [onboardingType, setOnboardingType] = useState<'private' | 'hospital' | 'invite'>('private');
+  const [onboardingType, setOnboardingType] = useState<'private' | 'invite'>('private');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -237,18 +232,13 @@ export default function LoginPage() {
                 <>
                   <RadioGroup 
                     defaultValue="private" 
-                    className="grid grid-cols-3 gap-4" 
-                    onValueChange={(value: 'private' | 'hospital' | 'invite') => setValue('onboardingType', value)}
+                    className="grid grid-cols-2 gap-4" 
+                    onValueChange={(value: 'private' | 'invite') => setValue('onboardingType', value)}
                   >
                     <Label className={cn("flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground", onboardingType === 'private' && "border-primary")}>
                       <RadioGroupItem value="private" className="sr-only" />
                       <Building className="mb-3 h-6 w-6" />
                       Private Clinic
-                    </Label>
-                    <Label className={cn("flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground", onboardingType === 'hospital' && "border-primary")}>
-                      <RadioGroupItem value="hospital" className="sr-only" />
-                      <Building className="mb-3 h-6 w-6" />
-                      Hospital
                     </Label>
                     <Label className={cn("flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground", onboardingType === 'invite' && "border-primary")}>
                       <RadioGroupItem value="invite" className="sr-only" />
@@ -277,22 +267,19 @@ export default function LoginPage() {
                   ) : (
                     <>
                       <div className="space-y-2">
-                        <Label htmlFor="orgName">Clinic/Hospital Name</Label>
+                        <Label htmlFor="orgName">Clinic Name</Label>
                         <Input id="orgName" {...register("orgName")} placeholder="Sunrise PulseNet Clinic" />
                         {errors.orgName && <p className="text-destructive text-xs">{`${errors.orgName.message}`}</p>}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="orgAddress">Clinic/Hospital Address</Label>
+                        <Label htmlFor="orgAddress">Clinic Address</Label>
                         <Input id="orgAddress" {...register("orgAddress")} placeholder="123 Health St, Pulse City" />
                          {errors.orgAddress && <p className="text-destructive text-xs">{`${errors.orgAddress.message}`}</p>}
                       </div>
                        <div className="space-y-2">
                             <Label>Your Role</Label>
                             <p className="text-sm text-muted-foreground">
-                                {onboardingType === 'hospital' 
-                                    ? "As the creator of a hospital, you will be an Admin."
-                                    : "As the creator of a private clinic, you will be a Doctor."
-                                }
+                                As the creator of a private clinic, you will be the lead Doctor.
                             </p>
                         </div>
                     </>

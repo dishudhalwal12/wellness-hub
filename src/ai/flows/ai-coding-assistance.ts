@@ -7,8 +7,8 @@ export type CodingAssistanceOutput = {
     changeHistory?: string;
 }
 
-export async function suggestCodes({ visitNotes }: { visitNotes: string }): Promise<CodingAssistanceOutput> {
-    const model = await getGenerativeModel();
+export async function suggestCodes({ visitNotes, orgId, apiKey }: { visitNotes: string; orgId?: string; apiKey?: string }): Promise<CodingAssistanceOutput> {
+    const model = await getGenerativeModel({ orgId, apiKey });
 
     const prompt = `You are an AI assistant specialized in medical coding. Given the following patient visit notes, suggest relevant ICD-10/CPT codes with confidence scores.
 

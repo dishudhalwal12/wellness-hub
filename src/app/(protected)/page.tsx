@@ -1,8 +1,8 @@
 'use client';
 
-import { Activity, CreditCard, IndianRupee, Users } from 'lucide-react';
+import { Activity, CreditCard, IndianRupee, Users, Loader2 } from 'lucide-react';
 import { collection, query, where } from 'firebase/firestore';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import { PageHeader, MetricCard } from '@/components/app/ui';
 import Overview from '@/components/dashboard/overview';
@@ -13,11 +13,21 @@ import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { demoAppointments, demoPatients } from '@/lib/demo-data';
 
+import { createInvite } from '@/firebase/user-actions';
+import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Copy, UserPlus } from 'lucide-react';
+
 import type { Patient } from './patients/page';
 
 export default function DashboardPage() {
   const { user, profile, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
 
   const patientsQuery = useMemoFirebase(() => {
     if (!firestore || !profile?.orgId || !user || isUserLoading) return null;
@@ -83,6 +93,34 @@ export default function DashboardPage() {
         eyebrow="Clinic Command Center"
         title={`Welcome back${profile?.name || user?.displayName ? `, ${(profile?.name || user?.displayName || '').split(' ')[0]}` : ''}`}
         description="Track collections, visit flow, and patient momentum from one polished dashboard that stays populated even before live data catches up."
+        actions={
+          profile?.role === 'doctor' && (
+            <Button onClick={async () => {
+              if (!firestore || !profile?.orgId || !user) return;
+              setIsGeneratingInvite(true);
+              try {
+                const code = await createInvite(firestore, {
+                  orgId: profile.orgId,
+                  createdBy: user.uid,
+                  roleAllowed: 'staff'
+                });
+                setInviteCode(code);
+                setIsInviteDialogOpen(true);
+              } catch (error) {
+                toast({
+                  variant: 'destructive',
+                  title: 'Error generating invite',
+                  description: 'Please try again later.'
+                });
+              } finally {
+                setIsGeneratingInvite(false);
+              }
+            }} disabled={isGeneratingInvite}>
+              {isGeneratingInvite ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
+              Invite Staff
+            </Button>
+          )
+        }
       >
         <span className="glass-chip">{dashboardStats.activePatients} active patients</span>
         <span className="glass-chip">{appointments.length} appointments on deck</span>
@@ -150,6 +188,33 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+      <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Invite Staff Member</DialogTitle>
+            <DialogDescription>
+              Share this code with your staff members. They can use it to join your clinic during registration.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center space-x-2 rounded-md border bg-muted p-3">
+            <code className="flex-1 text-lg font-bold tracking-wider">{inviteCode}</code>
+            <Button size="icon" variant="ghost" onClick={() => {
+              if (inviteCode) {
+                navigator.clipboard.writeText(inviteCode);
+                toast({
+                  title: 'Copied to clipboard',
+                  description: 'The invite code has been copied.'
+                });
+              }
+            }}>
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsInviteDialogOpen(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

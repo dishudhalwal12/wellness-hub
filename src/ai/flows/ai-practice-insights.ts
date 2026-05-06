@@ -9,33 +9,31 @@ type ReportInput = {
     tasks: any[],
 }
 
-export async function generatePracticeInsightsReport(input: ReportInput) {
-    const model = await getGenerativeModel();
+export async function generatePracticeInsightsReport(input: ReportInput & { orgId?: string; apiKey?: string }) {
+    const model = await getGenerativeModel({ orgId: input.orgId, apiKey: input.apiKey });
 
-    const prompt = `You are a brilliant data analyst AI for a medical clinic. Your task is to generate a practice insights report. Analyze the provided JSON data for patients and tasks to identify meaningful trends and generate actionable insights.
+    const prompt = `You are a world-class Medical Practice Consultant and Data Scientist. Your task is to analyze clinic data and generate a high-impact Practice Insights Report that feels like it was written by a top-tier management consultancy.
 
-    Here is the data for your analysis:
-    - Time Period for Report: ${input.timePeriod}
-    - Clinic Name: ${input.clinicName}
-    - Patient Data: ${JSON.stringify(input.patients, null, 2)}
-    - Task Data: ${JSON.stringify(input.tasks, null, 2)}
+    Data for Analysis:
+    - Period: ${input.timePeriod}
+    - Clinic: ${input.clinicName}
+    - Patients: ${JSON.stringify(input.patients)}
+    - Tasks: ${JSON.stringify(input.tasks)}
     
-    Current Date: ${new Date().toISOString()}
+    Current System Time: ${new Date().toISOString()}
 
-    Generate a report using markdown format. The report must include the following sections:
-    1.  **Executive Summary:** A brief, high-level overview of the key findings for the ${input.timePeriod}.
-    2.  **Patient & Revenue Analysis:**
-        *   Calculate total revenue for the period (sum of 'consultationFee').
-        *   Identify the number of new patients ('status: New').
-        *   Analyze the breakdown of visit types ('visitType: OPD vs. Emergency').
-        *   Highlight the top revenue sources based on visit types.
-    3.  **Task & Staff Performance:**
-        *   Calculate the number of tasks completed vs. pending ('status: Completed' vs. 'To Do'/'In Progress').
-        *   Identify any overdue tasks (compare 'dueDate' with the current date).
-        *   Mention which staff members ('assignee') have the most open tasks.
-    4.  **Actionable Insights & Recommendations:** Based on your analysis, provide 2-3 specific, actionable recommendations. For example, if many tasks are pending for one staff member, suggest rebalancing workload. If OPD visits are low, suggest a marketing campaign.
-    
-    Be concise, data-driven, and professional in your output.`;
+    Your report must be in sophisticated Markdown and include:
+    1.  **🚀 Executive Strategic Overview:** A high-level synthesis of operational health and growth trajectory.
+    2.  **💰 Financial & Revenue Intelligence:**
+        *   Deep dive into revenue streams (consultation fees).
+        *   Patient acquisition metrics (new vs. returning).
+        *   Visit type distribution (OPD vs. Emergency) and its impact on margins.
+    3.  **🏃 Operational Velocity & Staff Performance:**
+        *   Throughput analysis (completed vs. pending tasks).
+        *   Bottleneck identification (overdue tasks and assignee load).
+    4.  **🎯 Actionable Strategic Recommendations:** 2-3 high-leverage moves to optimize the clinic's performance immediately.
+
+    Use professional, data-driven language. Use bolding, tables, or lists where they enhance readability.`;
     
     try {
         console.info("Using model:", model.model);

@@ -11,7 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { demoStaffTasks } from '@/lib/demo-data';
+import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { cn } from '@/lib/utils';
 
 type TaskPriority = 'High' | 'Medium' | 'Low';
@@ -20,7 +21,7 @@ type TaskStatus = 'To Do' | 'In Progress' | 'Completed';
 type Task = {
   id: string;
   title: string;
-  patient: string;
+  patientName: string;
   assignedBy: string;
   dueDate: string;
   priority: TaskPriority;
@@ -46,7 +47,7 @@ function TaskCard({ task, onEdit }: { task: Task; onEdit: () => void }) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="font-semibold text-foreground">{task.title}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{task.patient}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{task.patientName}</p>
           </div>
           <Badge variant={task.priority === 'High' ? 'destructive' : task.priority === 'Medium' ? 'secondary' : 'outline'}>
             {task.priority}
@@ -133,7 +134,7 @@ function ViewTaskDialog({
       <DialogContent className="sm:max-w-[560px]">
         <DialogHeader>
           <DialogTitle>{task.title}</DialogTitle>
-          <CardDescription>Patient: {task.patient}</CardDescription>
+          <CardDescription>Patient: {task.patientName}</CardDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4 text-sm">
           <div className="grid gap-3 rounded-[22px] border border-border/70 bg-white/70 p-4">
@@ -178,12 +179,21 @@ function ViewTaskDialog({
     </Dialog>
   );
 }
-
 export default function StaffTasksPage() {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const { user, profile } = useUser();
+  const firestore = useFirestore();
   const [draggingOver, setDraggingOver] = useState<TaskStatus | null>(null);
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+
+  const tasksQuery = useMemoFirebase(() => {
+    if (!firestore || !profile?.orgId) return null;
+    // Show all tasks for the organization
+    return query(collection(firestore, 'tasks'), where('orgId', '==', profile.orgId));
+  }, [firestore, profile?.orgId]);
+
+  const { data: tasksData, isLoading: tasksLoading } = useCollection<Task>(tasksQuery);
+  const tasks = tasksData || [];
 
   const taskStats = useMemo(() => {
     const todo = tasks.filter((task) => task.status === 'To Do').length;
@@ -206,8 +216,11 @@ export default function StaffTasksPage() {
     setIsViewDialogOpen(true);
   };
 
-  const handleStatusChange = (taskId: string, newStatus: TaskStatus) => {
-    setTasks((current) => current.map((task) => (task.id === taskId ? { ...task, status: newStatus } : task)));
+  const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
+    if (!firestore) return;
+    const taskRef = doc(firestore, 'tasks', taskId);
+    await updateDoc(taskRef, { status: newStatus });
+    
     if (viewingTask?.id === taskId) {
       setViewingTask((current) => (current ? { ...current, status: newStatus } : null));
     }
@@ -223,7 +236,9 @@ export default function StaffTasksPage() {
         description="A polished personal task board for staff members with drag-and-drop flow, visible priority, and a complete working view from the first load."
       >
         <span className="glass-chip">{tasks.length} tasks in rotation</span>
-        <Badge variant="outline">Interactive board</Badge>
+        <Badge variant={tasks.length > 0 ? 'secondary' : 'outline'}>
+          {tasksLoading ? 'Syncing live tasks' : tasks.length > 0 ? 'Live board connected' : 'Board ready'}
+        </Badge>
       </PageHeader>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

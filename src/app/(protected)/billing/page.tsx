@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { BrainCircuit, Loader2, ReceiptText, ShieldCheck, Terminal } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from "@/firebase";
+import { doc } from "firebase/firestore";
 import { MetricCard, PageHeader } from "@/components/app/ui";
 import { demoBillingResult } from "@/lib/demo-data";
 
@@ -18,6 +20,10 @@ export default function BillingPage() {
     const [visitNotes, setVisitNotes] = useState("Patient is a 58-year-old male with a history of hypertension and type 2 diabetes, presenting for a 3-month follow-up. Reports occasional headaches and fatigue. BP is 145/90, and recent A1c was 7.8%. Physical exam is otherwise unremarkable. Assessment: Uncontrolled hypertension, poorly controlled type 2 diabetes.");
     const [isLoading, setIsLoading] = useState(false);
     const [result, setResult] = useState<CodingAssistanceOutput | null>(null);
+    const { user, profile } = useUser();
+    const firestore = useFirestore();
+    const { data: orgData } = useDoc(profile?.orgId ? doc(firestore!, 'orgs', profile.orgId) : null);
+    const orgApiKey = orgData?.googleApiKey;
     const { toast } = useToast();
 
     const confidenceSummary = useMemo(() => {
@@ -41,7 +47,7 @@ export default function BillingPage() {
 
         setIsLoading(true);
         try {
-            const output = await suggestCodes({ visitNotes });
+            const output = await suggestCodes({ visitNotes, orgId: profile?.orgId || '', apiKey: orgApiKey });
             setResult(output);
         } catch (error) {
             console.error("Error suggesting codes:", error);

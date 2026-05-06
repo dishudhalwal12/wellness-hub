@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { generatePracticeInsightsReport } from "@/ai/flows/ai-practice-insights";
 import { useToast } from "@/hooks/use-toast";
-import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from "@/firebase";
+import { doc } from "firebase/firestore";
 import { demoPatients, demoPracticeReport, demoTasks } from "@/lib/demo-data";
 
 import type { Patient } from "../patients/page";
@@ -39,6 +40,9 @@ export default function ReportsPage() {
         return query(collection(firestore, 'tasks'), where('orgId', '==', profile.orgId));
     }, [firestore, profile?.orgId, user, isUserLoading]);
     const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(tasksQuery);
+    
+    const { data: orgData } = useDoc(profile?.orgId ? doc(firestore!, 'orgs', profile.orgId) : null);
+    const orgApiKey = orgData?.googleApiKey;
 
     const displayPatients = (patients ?? []) as Patient[];
     const displayTasks = (tasks ?? []) as Task[];
@@ -65,7 +69,9 @@ export default function ReportsPage() {
                 timePeriod,
                 clinicName: profile?.orgName || 'Your Clinic',
                 patients: patients || [],
-                tasks: tasks || []
+                tasks: tasks || [],
+                orgId: profile?.orgId || '',
+                apiKey: orgApiKey,
             });
             setReport(result.report);
         } catch (error) {

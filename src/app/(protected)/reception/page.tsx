@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { collection, query, where } from "firebase/firestore";
+import { collection, query, where, orderBy, doc, writeBatch } from "firebase/firestore";
 import { ClipboardList, Loader2, SendHorizonal, Sparkles, UsersRound } from "lucide-react";
 
 import { MetricCard, PageHeader } from "@/components/app/ui";
@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { handleReceptionAssistant } from "./actions";
 import { useToast } from "@/hooks/use-toast";
-import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from "@/firebase";
 import { demoQueue, demoTasks, demoPatients } from "@/lib/demo-data";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +36,7 @@ type QueueItem = {
     status: "Waiting" | "In Consult" | "Finished";
     eta: string;
     checklist: ChecklistItems;
+    createdAt?: any;
 };
 
 type ChatMessage = {
@@ -87,6 +88,9 @@ export default function ReceptionPage() {
     }, [firestore, profile?.orgId, user, isUserLoading]);
     const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(tasksQuery);
 
+    const { data: orgData } = useDoc(profile?.orgId ? doc(firestore!, 'orgs', profile.orgId) : null);
+    const orgApiKey = orgData?.googleApiKey;
+
     useEffect(() => {
         if (patients?.length) {
             setQueue(patients.map(transformPatientToQueueItem));
@@ -131,19 +135,38 @@ export default function ReceptionPage() {
         setIsLoading(true);
 
         try {
+            // Clean Firestore timestamps for serialization
+            const cleanQueue = (queue || []).map(q => ({
+                ...q,
+                createdAt: q.createdAt && typeof q.createdAt.toMillis === 'function' ? q.createdAt.toMillis() : q.createdAt
+            }));
+            const cleanTasks = (tasks || []).map(t => ({
+                ...t,
+                createdAt: t.createdAt && typeof t.createdAt.toMillis === 'function' ? t.createdAt.toMillis() : t.createdAt
+            }));
+
             const result = await handleReceptionAssistant({
                 query: input,
-                currentQueue: queue,
-                currentTasks: tasks || [],
+                currentQueue: cleanQueue as any,
+                currentTasks: cleanTasks as any,
+                orgId: profile?.orgId || '',
+                apiKey: orgApiKey,
             });
 
             setMessages((current) => [...current, { role: 'ai', text: result.response }]);
 
-            if (result.updatedQueue) {
-                setQueue(result.updatedQueue as QueueItem[]);
+            if (result.updatedQueue && firestore) {
+                // Persist updates to Firestore
+                const batch = writeBatch(firestore);
+                (result.updatedQueue as any[]).forEach((item) => {
+                    const itemRef = doc(firestore, 'queue', item.id);
+                    batch.set(itemRef, item, { merge: true });
+                });
+                await batch.commit();
+
                 toast({
-                    title: "Queue updated",
-                    description: "The patient queue has been modified by the AI assistant.",
+                    title: "Queue Updated",
+                    description: "The AI assistant has updated the patient queue in the database."
                 });
             }
         } catch (error) {

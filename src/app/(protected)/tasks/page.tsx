@@ -126,6 +126,7 @@ function EditTaskDialog({
   onSave,
   user,
   profile,
+  staffMembers,
 }: {
   task: Partial<Task> | null;
   open: boolean;
@@ -133,6 +134,7 @@ function EditTaskDialog({
   onSave: (updatedTask: Partial<Task>) => void;
   user: any;
   profile: any;
+  staffMembers: any[];
 }) {
   const [editedTask, setEditedTask] = useState<Partial<Task> | null>(task);
 
@@ -173,13 +175,25 @@ function EditTaskDialog({
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="assignee">Assignee</Label>
-              <Input
-                id="assignee"
-                value={editedTask.assignee || ''}
-                onChange={(event) => handleChange('assignee', event.target.value)}
-                placeholder="Staff member name"
-              />
+              <Label>Assignee</Label>
+              <Select
+                onValueChange={(value) => handleChange('assignee', value)}
+                defaultValue={editedTask.assignee}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select staff member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {staffMembers.map((staff) => (
+                    <SelectItem key={staff.id} value={staff.name}>
+                      {staff.name}
+                    </SelectItem>
+                  ))}
+                  {staffMembers.length === 0 && (
+                    <div className="p-2 text-xs text-muted-foreground">No staff members found in your organization.</div>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="dueDate">Due Date</Label>
@@ -249,8 +263,15 @@ export default function TasksPage() {
     return query(collection(firestore, 'tasks'), where('orgId', '==', profile.orgId));
   }, [firestore, profile?.orgId]);
 
+  const staffQuery = useMemoFirebase(() => {
+    if (!firestore || !profile?.orgId) return null;
+    return query(collection(firestore, 'users'), where('orgId', '==', profile.orgId), where('role', '==', 'staff'));
+  }, [firestore, profile?.orgId]);
+
   const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(tasksQuery);
+  const { data: staffMembersData } = useCollection<any>(staffQuery);
   const boardTasks = tasks || [];
+  const staffMembers = staffMembersData || [];
 
   const taskStats = useMemo(() => {
     const todo = boardTasks.filter((task) => task.status === 'To Do').length;
@@ -402,6 +423,7 @@ export default function TasksPage() {
         onSave={handleSaveTask}
         user={user}
         profile={profile}
+        staffMembers={staffMembers}
       />
     </div>
   );

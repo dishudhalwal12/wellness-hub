@@ -14,17 +14,18 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, UploadCloud, Bot, AlertTriangle, FileText, FlaskConical, Stethoscope, SendHorizonal, User, Pilcrow, HeartPulse, UserCheck, CalendarDays, Pill, AlertCircle } from 'lucide-react';
+import { Loader2, UploadCloud, Bot, AlertTriangle, FileText, FlaskConical, Stethoscope, SendHorizonal, User, Pilcrow, HeartPulse, UserCheck, CalendarDays, Pill, AlertCircle, Sparkles } from 'lucide-react';
 import { diagnoseHealthReport, askDiagnosticQuestion } from '@/ai/flows/ai-diagnostic-assistant';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import ReactMarkdown from 'react-markdown';
 import { generatePrescription } from '@/ai/flows/ai-prescription-generator';
-import { useDoc, useMemoFirebase } from '@/firebase';
+import { aiSmartNotesDrafting } from '@/ai/ai-smart-notes-drafting';
+import { generateInvoice } from '@/ai/ai-smart-billing';
+import { useDoc, useMemoFirebase, useUser, useFirestore } from '@/firebase';
 import Link from "next/link";
-import { doc, type DocumentData } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { doc, type DocumentData, setDoc } from 'firebase/firestore';
 import type { Patient } from '@/app/(protected)/patients/page';
 import { useParams } from 'next/navigation';
 import { PageHeader } from '@/components/app/ui';
@@ -203,7 +204,17 @@ function IntelligencePanel({
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const prescriptionRef = useRef<HTMLDivElement>(null);
     const { toast } = useToast();
+    const { profile } = useUser();
+    const firestore = useFirestore();
+    const { data: orgData } = useDoc(profile?.orgId ? doc(firestore!, 'orgs', profile.orgId) : null);
+    const orgApiKey = orgData?.googleApiKey;
     const activeDiagnosis = diagnosis ?? previewDiagnosis;
+    
+    const [smartNote, setSmartNote] = useState<{ assessmentSuggestion: string, planSuggestion: string } | null>(null);
+    const [isGeneratingNote, setIsGeneratingNote] = useState(false);
+    
+    const [invoice, setInvoice] = useState<any>(null);
+    const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
 
     const handlePrint = () => {
         toast({
@@ -220,23 +231,35 @@ function IntelligencePanel({
     }, [messages, isReplying]);
     
     useEffect(() => {
-        if (diagnosis) {
-             try {
-                const storedDiagnoses: StoredDiagnosis[] = JSON.parse(localStorage.getItem(`${DIAGNOSIS_STORAGE_KEY}-${patientId}`) || '[]');
-                const newDiagnosis: StoredDiagnosis = {
-                    id: crypto.randomUUID(),
-                    patientId: patientId,
-                    diagnosis: diagnosis,
-                    createdAt: new Date().toISOString(),
-                };
-                // Keep only the last 5 diagnoses
-                const updatedDiagnoses = [newDiagnosis, ...storedDiagnoses].slice(0, 5);
-                localStorage.setItem(`${DIAGNOSIS_STORAGE_KEY}-${patientId}`, JSON.stringify(updatedDiagnoses));
-            } catch (error) {
-                console.error("Failed to save diagnosis to local storage:", error);
-            }
+        if (diagnosis && firestore && profile?.orgId) {
+             const saveDiagnosis = async () => {
+                try {
+                    const diagnosisId = crypto.randomUUID();
+                    await setDoc(doc(firestore, 'diagnoses', diagnosisId), {
+                        id: diagnosisId,
+                        patientId: patientId,
+                        orgId: profile.orgId,
+                        diagnosis: diagnosis,
+                        createdAt: new Date().toISOString(),
+                    });
+                    
+                    // Also keep in local storage for instant fallback
+                    const storedDiagnoses: StoredDiagnosis[] = JSON.parse(localStorage.getItem(`${DIAGNOSIS_STORAGE_KEY}-${patientId}`) || '[]');
+                    const newDiagnosis: StoredDiagnosis = {
+                        id: diagnosisId,
+                        patientId: patientId,
+                        diagnosis: diagnosis,
+                        createdAt: new Date().toISOString(),
+                    };
+                    const updatedDiagnoses = [newDiagnosis, ...storedDiagnoses].slice(0, 5);
+                    localStorage.setItem(`${DIAGNOSIS_STORAGE_KEY}-${patientId}`, JSON.stringify(updatedDiagnoses));
+                } catch (error) {
+                    console.error("Failed to save diagnosis to Firestore:", error);
+                }
+             };
+             saveDiagnosis();
         }
-    }, [diagnosis, patientId]);
+    }, [diagnosis, patientId, firestore, profile?.orgId]);
 
     const getPriorityVariant = (priority: 'High' | 'Medium' | 'Low') => {
         switch (priority) {
@@ -276,6 +299,39 @@ function IntelligencePanel({
         }
     };
 
+    const handleGenerateSmartNote = async () => {
+        if (!activeDiagnosis) return;
+        setIsGeneratingNote(true);
+        try {
+            const result = await aiSmartNotesDrafting({
+                patientData: JSON.stringify({ diagnosis: activeDiagnosis })
+            });
+            setSmartNote(result);
+            toast({ title: "Smart Note Drafted", description: "AI has generated assessment and plan suggestions." });
+        } catch (error) {
+            toast({ variant: "destructive", title: "AI Error", description: "Failed to draft smart note." });
+        } finally { setIsGeneratingNote(false); }
+    };
+
+    const handleGenerateInvoice = async () => {
+        if (!activeDiagnosis || !profile?.orgId) return;
+        setIsGeneratingInvoice(true);
+        try {
+            const result = await generateInvoice({
+                consultationNotes: activeDiagnosis.summary,
+                patientName: "John Doe", // Fallback for prototype
+                patientId: patientId,
+                dateOfService: new Date().toISOString().split('T')[0],
+                clinicName: profile.orgName || "PulseNet Clinic",
+                providerName: profile.name || "Attending Physician"
+            });
+            setInvoice(result);
+            toast({ title: "Smart Invoice Generated", description: "AI has coded the visit and generated an invoice draft." });
+        } catch (error) {
+            toast({ variant: "destructive", title: "AI Error", description: "Failed to generate invoice." });
+        } finally { setIsGeneratingInvoice(false); }
+    };
+
     const handleSendMessage = async () => {
         if (!chatInput.trim() || !reportContent || !activeDiagnosis) {
             return;
@@ -292,7 +348,9 @@ function IntelligencePanel({
                 reportContent,
                 chatInput,
                 currentMessages,
-                JSON.stringify(activeDiagnosis)
+                JSON.stringify(activeDiagnosis),
+                profile?.orgId || '',
+                orgApiKey
             );
             const newModelMessage: ChatMessage = { role: 'model', parts: [{ text: result.answer }] };
             setMessages(prev => [...prev, newModelMessage]);
@@ -428,7 +486,72 @@ function IntelligencePanel({
                                     {isGeneratingRx ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Pilcrow className="mr-2 h-4 w-4" />}
                                     Generate Prescription
                                 </Button>
+                                
+                                <div className="grid grid-cols-2 gap-3 mt-3">
+                                    <Button 
+                                        variant="outline"
+                                        onClick={handleGenerateSmartNote} 
+                                        disabled={isGeneratingNote || !activeDiagnosis}
+                                    >
+                                        {isGeneratingNote ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+                                        Smart Note
+                                    </Button>
+                                    <Button 
+                                        variant="outline"
+                                        onClick={handleGenerateInvoice} 
+                                        disabled={isGeneratingInvoice || !activeDiagnosis}
+                                    >
+                                        {isGeneratingInvoice ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <HeartPulse className="mr-2 h-4 w-4" />}
+                                        Smart Billing
+                                    </Button>
+                                </div>
                             </div>
+                            
+                            {smartNote && (
+                                <>
+                                <Separator />
+                                <div className="space-y-4">
+                                    <h3 className="font-semibold text-base flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> AI Smart Note Suggestions</h3>
+                                    <div className="grid gap-4">
+                                        <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
+                                            <p className="text-xs font-bold uppercase tracking-wider text-primary mb-1">Assessment Suggestion</p>
+                                            <p className="text-sm leading-6">{smartNote.assessmentSuggestion}</p>
+                                        </div>
+                                        <div className="p-3 bg-secondary/5 rounded-lg border border-secondary/10">
+                                            <p className="text-xs font-bold uppercase tracking-wider text-secondary mb-1">Plan Suggestion</p>
+                                            <p className="text-sm leading-6">{smartNote.planSuggestion}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                </>
+                            )}
+
+                            {invoice && (
+                                <>
+                                <Separator />
+                                <div className="space-y-4">
+                                    <h3 className="font-semibold text-base flex items-center gap-2"><HeartPulse className="w-4 h-4 text-primary" /> AI Smart Billing Draft</h3>
+                                    <div className="p-4 bg-muted rounded-xl space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <p className="font-bold">{invoice.invoiceNumber}</p>
+                                            <Badge variant="outline">{invoice.dateOfService}</Badge>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {invoice.services.map((s: any, i: number) => (
+                                                <div key={i} className="flex justify-between text-xs border-b border-border/50 pb-1">
+                                                    <span>{s.description} ({s.code})</span>
+                                                    <span className="font-semibold">₹{s.price}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="flex justify-between items-center pt-2">
+                                            <p className="text-sm font-bold text-primary">Total Amount</p>
+                                            <p className="text-lg font-bold text-primary">₹{invoice.totalAmount}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                </>
+                            )}
                             
                             {isGeneratingRx && (
                                 <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-4">
@@ -499,16 +622,18 @@ function IntelligencePanel({
 }
 
 export default function PatientProfilePage() {
-  const params = useParams();
-  const patientId = params.patientId as string;
+  const { user, profile } = useUser();
+  const { patientId } = useParams() as { patientId: string };
   const [reportContent, setReportContent] = useState<string | null>(null);
+  const firestore = useFirestore();
+  const { data: orgData } = useDoc(profile?.orgId ? doc(firestore!, 'orgs', profile.orgId) : null);
+  const orgApiKey = orgData?.googleApiKey;
   const [fileName, setFileName] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDiagnosing, setIsDiagnosing] = useState(false);
   const [diagnosis, setDiagnosis] = useState<DiagnosisOutput | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const firestore = useFirestore();
 
   const isDemoPatient = patientId?.startsWith('demo-');
 
@@ -585,7 +710,7 @@ export default function PatientProfilePage() {
     setIsDiagnosing(true);
     setDiagnosis(null);
     try {
-        const result = await diagnoseHealthReport(activeReportContent);
+        const result = await diagnoseHealthReport(activeReportContent, profile?.orgId || '', orgApiKey);
         setDiagnosis({
             summary: result.summary ?? "No diagnosis summary was returned.",
             keyAbnormalities: result.keyAbnormalities ?? [],

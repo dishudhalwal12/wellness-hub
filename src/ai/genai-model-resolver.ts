@@ -1,7 +1,7 @@
 // src/ai/genai-model-resolver.ts
 import fetch from "node-fetch"; // if your runtime supports global fetch you can switch to that
 
-const PREFERRED_MODEL_SUBSTRINGS = ["gemini-2.5-flash", "gemini-2.5", "gemini-2", "gemini-1.5", "gemini"]; // preference order, but we will rely on supported methods
+const PREFERRED_MODEL_SUBSTRINGS = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-pro", "gemini-2.0"]; // preference order
 
 let cachedModel: { model: string; method: "generateContent" | "generateMessage"; apiBase: "v1beta"|"v1" } | null = null;
 

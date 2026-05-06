@@ -1,58 +1,57 @@
 'use server';
-
+// src/ai/ai-smart-billing.ts
 import { getGenerativeModel } from '@/ai/google-genai';
-import { z } from 'zod';
 
-const GenerateInvoiceInputSchema = z.object({
-  consultationNotes: z.string().describe('Detailed notes from the patient consultation, including services provided and medications prescribed.'),
-  patientName: z.string().describe('The name of the patient.'),
-  patientId: z.string().describe('Unique identifier for the patient.'),
-  dateOfService: z.string().describe('The date the service was provided (e.g., YYYY-MM-DD).'),
-  clinicName: z.string().describe('The name of the clinic.'),
-  providerName: z.string().describe('The name of the healthcare provider.'),
-});
-
-export type GenerateInvoiceInput = z.infer<typeof GenerateInvoiceInputSchema>;
-
-export async function generateInvoice(input: GenerateInvoiceInput) {
+export async function generateInvoice(input: {
+  consultationNotes: string;
+  patientName: string;
+  patientId: string;
+  dateOfService: string;
+  clinicName: string;
+  providerName: string;
+}) {
   const model = await getGenerativeModel();
 
-  const prompt = `You are an AI assistant designed to automatically generate invoices based on consultation notes.
+  const prompt = `You are a professional medical coding and billing AI. Your expertise is in converting clinical consultation notes into accurate billing statements with appropriate CPT/ICD-10 codes.
 
-  Based on the following consultation details, generate an invoice with appropriate services, CPT codes, and fictional but realistic pricing.
-  Ensure all fields from the input are included in the output.
-  Use today's date as the invoiceDate.
-  Set the paymentDueDate to be 30 days from today.
-  Generate a unique invoiceNumber.
-
-  Consultation Notes: ${input.consultationNotes}
-  Patient Name: ${input.patientName}
-  Patient ID: ${input.patientId}
+  Review the following consultation details and generate a structured invoice.
+  
+  Patient: ${input.patientName} (${input.patientId})
   Date of Service: ${input.dateOfService}
-  Clinic Name: ${input.clinicName}
-  Provider Name: ${input.providerName}
+  Clinic: ${input.clinicName}
+  Provider: ${input.providerName}
+  
+  Consultation Notes:
+  ${input.consultationNotes}
 
-  Respond in a valid JSON format. The root object should contain keys for: invoiceNumber, invoiceDate, patientName, patientId, dateOfService, clinicName, providerName, services (an array of objects with description, code, and price), totalAmount, and paymentDueDate.`;
+  Generate a JSON response with these keys:
+  - "invoiceNumber": (string) A unique, professional invoice ID.
+  - "invoiceDate": (string) Today's date.
+  - "services": (array) List of billed services. Each service must have:
+    - "description": (string) Professional description of the service.
+    - "code": (string) The relevant CPT or HCPCS code.
+    - "price": (number) A realistic, industry-standard price for the service (in ₹).
+  - "totalAmount": (number) The sum of all service prices.
+  - "paymentDueDate": (string) 30 days from now.
+
+  Return ONLY valid JSON.`;
 
   try {
-    console.info("Using model:", model.model);
-    const result = await model.generateContent(prompt);
+    const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+            temperature: 0.1,
+            responseMimeType: "application/json",
+        }
+    });
+    
     const response = await result.response;
     const text = response.text();
+    const parsed = JSON.parse(text);
     
-    const jsonMatch = text.match(/{[\s\S]*}/);
-    if (jsonMatch) {
-      const jsonString = jsonMatch[0];
-      const parsed = JSON.parse(jsonString);
-      if (parsed.invoiceNumber && parsed.totalAmount && Array.isArray(parsed.services)) {
-        return parsed;
-      }
-    }
-    console.error("AI response missing or malformed JSON payload:", text);
-    throw new Error('Failed to get a valid JSON response structure from AI for billing');
+    return parsed;
   } catch (e) {
     console.error("AI billing generation failed:", e);
-    const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred';
-    throw new Error(`Failed to generate invoice from AI. Reason: ${errorMessage}`);
+    throw new Error(`Failed to generate billing draft. ${e instanceof Error ? e.message : ''}`);
   }
 }

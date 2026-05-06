@@ -15,7 +15,7 @@ import { customAlphabet } from 'nanoid';
 
 export type SignupFormData = {
     userId: string;
-    onboardingType: 'private' | 'hospital' | 'invite';
+    onboardingType: 'private' | 'invite';
     fullName: string;
     email: string;
     phoneNumber: string;
@@ -77,11 +77,11 @@ export function processNewUser(
         let orgType: 'private' | 'hospital' = 'private';
         let userRole: 'doctor' | 'admin' | 'staff' = 'doctor';
 
-        if (signupData.onboardingType === 'private' || signupData.onboardingType === 'hospital') {
+        if (signupData.onboardingType === 'private') {
             const orgDocRef = doc(collection(firestore, 'orgs'));
             orgId = orgDocRef.id;
             orgType = signupData.onboardingType;
-            userRole = signupData.onboardingType === 'hospital' ? 'admin' : 'doctor';
+            userRole = 'doctor';
 
             batch.set(orgDocRef, {
                 id: orgId,

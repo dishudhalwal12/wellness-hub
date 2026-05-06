@@ -10,8 +10,8 @@ function normalizeModelId(resolverModel: string): string {
   return resolverModel.replace(/^models\//, "").replace(/^\//, "");
 }
 
-async function callGenerativeModel(promptText: string) {
-  const model = await getGenerativeModel();
+async function callGenerativeModel(promptText: string, orgId?: string, apiKey?: string) {
+  const model = await getGenerativeModel({ orgId, apiKey });
   const shortModelId = normalizeModelId(model.model);
 
   try {
@@ -44,7 +44,7 @@ type DiagnosisResult = {
 
 
 // Example usage inside your existing diagnoseHealthReport function
-export async function diagnoseHealthReport(reportText: string): Promise<DiagnosisResult> {
+export async function diagnoseHealthReport(reportText: string, orgId?: string, apiKey?: string): Promise<DiagnosisResult> {
   const prompt = `You are a world-class AI diagnostician, embodying the combined expertise of the world's top physicians. Your thinking is not linear; it is a layered, dynamic process of pattern recognition, anomaly hunting, and probability adjustment.
 
   Your core thought process is as follows:
@@ -80,10 +80,10 @@ export async function diagnoseHealthReport(reportText: string): Promise<Diagnosi
   Health Report:
   ${reportText}
 
-  Return ONLY a valid JSON object. Do not include any introductory text or markdown formatting.`;
+  Return ONLY a valid JSON object. Do not include any introductory text, preamble, or markdown formatting. Ensure the JSON is strictly parsable.`;
 
   try {
-    const aiResultText = await callGenerativeModel(prompt);
+    const aiResultText = await callGenerativeModel(prompt, orgId, apiKey);
     
     // The model is now configured to return JSON directly
     const parsed = JSON.parse(aiResultText);
@@ -101,10 +101,12 @@ export async function askDiagnosticQuestion(
   question: string,
   chatHistory: Array<{role: 'user' | 'model', parts: {text: string}[]}>,
   diagnosisContext?: string,
+  orgId?: string,
+  apiKey?: string,
 ) {
   try {
     // Use the robust getGenerativeModel to avoid 404 errors
-    const model = await getGenerativeModel();
+    const model = await getGenerativeModel({ orgId, apiKey });
 
     const history = [
         {

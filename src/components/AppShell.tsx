@@ -72,6 +72,8 @@ const adminNavItems = [
 ];
 
 const staffNavItems = [
+  { href: '/', icon: LayoutGrid, label: 'Dashboard' },
+  { href: '/reception', icon: BotMessageSquare, label: 'AI Reception' },
   { href: '/staff-tasks', icon: BriefcaseMedical, label: 'My Tasks' },
 ];
 

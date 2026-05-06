@@ -9,10 +9,10 @@ import { getApiKey as getApiKeyFromServer } from "./actions/api-keys-actions";
  * Return a new SDK client instance.
  * Exported as an async function (safe for "use server" context).
  */
-export async function createGenaiClient(apiKey?: string) {
-  const key = apiKey || await getApiKeyFromServer();
+export async function createGenaiClient(apiKey?: string, orgId?: string) {
+  const key = apiKey || await getApiKeyFromServer(orgId);
   if (!key) {
-    console.warn("Warning: GOOGLE_API_KEY not configured in server environment.");
+    console.warn("Warning: GOOGLE_API_KEY not configured in server environment or organization profile.");
   }
   return new GoogleGenerativeAI(key);
 }
@@ -22,10 +22,10 @@ export async function createGenaiClient(apiKey?: string) {
  * This function now uses the robust model resolver to avoid 404s and correctly pick a model.
  * Always call this inside an async server action / API handler.
  */
-export async function getGenerativeModel(options?: { apiKey?: string; [key: string]: any }) {
-    const apiKey = options?.apiKey || await getApiKeyFromServer();
+export async function getGenerativeModel(options?: { apiKey?: string; orgId?: string; [key: string]: any }) {
+    const apiKey = options?.apiKey || await getApiKeyFromServer(options?.orgId);
     if (!apiKey) {
-      throw new Error("Could not get a valid generative model. API key is missing.");
+      throw new Error("Could not get a valid generative model. API key is missing. Please provide it in Settings > AI Governance.");
     }
     const client = new GoogleGenerativeAI(apiKey);
     try {

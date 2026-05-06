@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bot, FileStack, Loader2, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { Bot, FileStack, Loader2, ShieldCheck, Sparkles, Users, Key } from "lucide-react";
 
 import { PageHeader } from "@/components/app/ui";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,9 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAiConfigStatus } from "@/ai/actions/api-keys-actions";
 import { useToast } from "@/hooks/use-toast";
+import { useUser, useFirestore } from "@/firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { Button } from "@/components/ui/button";
 
 type AiConfigStatus = {
     configured: boolean;
@@ -25,8 +28,12 @@ const fallbackAiConfig: AiConfigStatus = {
 
 export default function SettingsPage() {
     const { toast } = useToast();
+    const { user, profile } = useUser();
+    const firestore = useFirestore();
     const [aiConfig, setAiConfig] = useState<AiConfigStatus>(fallbackAiConfig);
     const [isLoading, setIsLoading] = useState(true);
+    const [manualApiKey, setManualApiKey] = useState("");
+    const [isSavingKey, setIsSavingKey] = useState(false);
 
     useEffect(() => {
         const fetchConfig = async () => {
@@ -34,6 +41,14 @@ export default function SettingsPage() {
             try {
                 const config = await getAiConfigStatus();
                 setAiConfig(config);
+
+                // Fetch organization-level API key if it exists
+                if (firestore && profile?.orgId) {
+                    const orgDoc = await getDoc(doc(firestore, 'orgs', profile.orgId));
+                    if (orgDoc.exists() && orgDoc.data().googleApiKey) {
+                        setManualApiKey(orgDoc.data().googleApiKey);
+                    }
+                }
             } catch {
                 toast({
                     variant: "destructive",
@@ -45,7 +60,7 @@ export default function SettingsPage() {
             }
         };
         fetchConfig();
-    }, [toast]);
+    }, [toast, firestore, profile?.orgId]);
 
     return (
         <div className="space-y-6">
@@ -217,15 +232,56 @@ export default function SettingsPage() {
                                     ) : (
                                         <>
                                             <div className="space-y-2">
-                                                <Label htmlFor="aiStatus">Google API Key Status</Label>
-                                                <Input id="aiStatus" readOnly value={aiConfig.configured ? "Configured" : "Missing"} />
+                                                <Label htmlFor="manualApiKey">Google API Key (Manual Override)</Label>
+                                                <div className="flex gap-2">
+                                                    <Input 
+                                                        id="manualApiKey" 
+                                                        type="password" 
+                                                        placeholder="Paste your Gemini API key here" 
+                                                        value={manualApiKey}
+                                                        onChange={(e) => setManualApiKey(e.target.value)}
+                                                    />
+                                                    <Button 
+                                                        onClick={async () => {
+                                                            if (!firestore || !profile?.orgId) return;
+                                                            setIsSavingKey(true);
+                                                            try {
+                                                                await setDoc(doc(firestore, 'orgs', profile.orgId), {
+                                                                    googleApiKey: manualApiKey
+                                                                }, { merge: true });
+                                                                toast({
+                                                                    title: "API Key Saved",
+                                                                    description: "The clinic's AI configuration has been updated."
+                                                                });
+                                                            } catch (e) {
+                                                                toast({
+                                                                    variant: "destructive",
+                                                                    title: "Error",
+                                                                    description: "Failed to save API key."
+                                                                });
+                                                            } finally {
+                                                                setIsSavingKey(false);
+                                                            }
+                                                        }}
+                                                        disabled={isSavingKey || !manualApiKey}
+                                                    >
+                                                        {isSavingKey ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Key"}
+                                                    </Button>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    This key will be used for all AI features in this clinic if no environment key is found.
+                                                </p>
+                                            </div>
+                                            <div className="space-y-2 pt-2">
+                                                <Label htmlFor="aiStatus">Environment Key Status</Label>
+                                                <Input id="aiStatus" readOnly value={aiConfig.configured ? "Detected in .env" : "Not found in .env"} />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label htmlFor="envLocation">Environment File</Label>
+                                                <Label htmlFor="envLocation">Environment File Reference</Label>
                                                 <Input id="envLocation" readOnly value={aiConfig.envFile} />
                                             </div>
                                             <p className="text-sm leading-6 text-muted-foreground">
-                                                Add <code>GOOGLE_API_KEY</code> to <code>{aiConfig.envFile}</code> and restart the app to enable live AI features.
+                                                You can either provide a key above or add <code>GOOGLE_API_KEY</code> to <code>{aiConfig.envFile}</code> on the server.
                                             </p>
                                         </>
                                     )}
@@ -240,17 +296,17 @@ export default function SettingsPage() {
                                 <CardContent className="space-y-4">
                                     {[
                                         {
-                                            id: 'ai-drafting',
+                                            id: 'aiDrafting',
                                             title: 'Smart Note AI Drafting',
                                             description: 'Allow AI to auto-summarize and suggest content for progress notes.',
                                         },
                                         {
-                                            id: 'ai-coding',
+                                            id: 'aiCoding',
                                             title: 'Claims & Coding Assistant',
                                             description: 'Enable AI suggestions for ICD/CPT codes based on visit notes.',
                                         },
                                         {
-                                            id: 'ai-reception',
+                                            id: 'aiReception',
                                             title: 'AI Reception Assistant',
                                             description: 'Activate the patient-facing and staff-support conversational assistant.',
                                         },
@@ -260,7 +316,29 @@ export default function SettingsPage() {
                                                 <Label htmlFor={item.id} className="text-base">{item.title}</Label>
                                                 <p className="text-sm leading-6 text-muted-foreground">{item.description}</p>
                                             </div>
-                                            <Switch id={item.id} defaultChecked />
+                                            <Switch 
+                                                id={item.id} 
+                                                checked={profile?.[item.id] !== false}
+                                                onCheckedChange={async (checked) => {
+                                                    if (firestore && user) {
+                                                        try {
+                                                            await setDoc(doc(firestore, 'users', user.uid), {
+                                                                [item.id]: checked
+                                                            }, { merge: true });
+                                                            toast({
+                                                                title: "Setting updated",
+                                                                description: `${item.title} has been ${checked ? 'enabled' : 'disabled'}.`
+                                                            });
+                                                        } catch (e) {
+                                                            toast({
+                                                                variant: "destructive",
+                                                                title: "Error",
+                                                                description: "Failed to update setting."
+                                                            });
+                                                        }
+                                                    }
+                                                }}
+                                            />
                                         </div>
                                     ))}
                                 </CardContent>

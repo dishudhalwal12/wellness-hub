@@ -1,39 +1,44 @@
 'use server';
-
+// src/ai/ai-smart-notes-drafting.ts
 import { getGenerativeModel } from '@/ai/google-genai';
 
 export async function aiSmartNotesDrafting({ patientData }: { patientData: string }) {
     const model = await getGenerativeModel();
 
-    const prompt = `You are an AI assistant that helps doctors draft progress notes. Given the patient data, generate suggestions for the assessment and plan sections of the note.
+    const prompt = `You are an elite AI medical documentation specialist. Your goal is to draft high-precision progress notes (SOAP) for a physician.
 
-    Patient Data:
+    Patient Context & Data:
     ${patientData}
 
-    Respond in JSON format with keys: "assessmentSuggestion" and "planSuggestion".`;
+    Based on the provided patient data and the current clinical context, generate professional suggestions for the 'Assessment' and 'Plan' sections of a progress note. 
+    - The Assessment should be a concise clinical synthesis of the findings.
+    - The Plan should be actionable, specific, and follow current best practices.
+
+    Respond ONLY in a JSON format with these exact keys:
+    {
+      "assessmentSuggestion": "A concise clinical synthesis...",
+      "planSuggestion": "A bulleted list of specific, actionable steps..."
+    }`;
 
     try {
-        console.info("Using model:", model.model);
-        const result = await model.generateContent(prompt);
+        const result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+                temperature: 0.2,
+                responseMimeType: "application/json",
+            }
+        });
         const response = await result.response;
         const text = response.text();
+        const parsed = JSON.parse(text);
 
-        const jsonMatch = text.match(/{[\s\S]*}/);
-        if (jsonMatch) {
-            const jsonString = jsonMatch[0];
-            const parsed = JSON.parse(jsonString);
-            if (parsed.assessmentSuggestion && parsed.planSuggestion) {
-                 return {
-                    ...parsed,
-                    progress: 'Generated assessment and plan suggestions.'
-                 };
-            }
-        }
-        console.error("AI response missing or malformed JSON payload:", text);
-        throw new Error('Failed to get a valid JSON response from AI for smart notes');
+        return {
+            assessmentSuggestion: parsed.assessmentSuggestion,
+            planSuggestion: parsed.planSuggestion,
+            progress: 'AI-generated assessment and plan drafts ready for review.'
+        };
     } catch (e) {
         console.error("AI smart notes generation failed:", e);
-        const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred';
-        throw new Error(`Failed to get smart notes from AI. Reason: ${errorMessage}`);
+        throw new Error(`Failed to generate smart notes. ${e instanceof Error ? e.message : ''}`);
     }
 }
