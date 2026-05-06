@@ -649,14 +649,15 @@ export default function PatientProfilePage() {
 
   // Load latest diagnosis from Firestore
   const diagnosesQuery = useMemoFirebase(() => {
-      if (!firestore || !patientId || isDemoPatient) return null;
+      if (!firestore || !patientId || isDemoPatient || !profile?.orgId) return null;
       return query(
           collection(firestore, 'diagnoses'),
           where('patientId', '==', patientId),
+          where('orgId', '==', profile.orgId),
           orderBy('createdAt', 'desc'),
           limit(1)
       );
-  }, [firestore, patientId, isDemoPatient]);
+  }, [firestore, patientId, isDemoPatient, profile?.orgId]);
   
   const { data: latestDiagnoses } = useCollection<any>(diagnosesQuery);
   

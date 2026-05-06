@@ -150,12 +150,12 @@ service cloud.firestore {
     }
 
     match /diagnoses/{diagnosisId} {
-      allow read: if isSignedIn() && isOrgMember(resource.data.orgId);
+      allow read: if isSignedIn() && (isOrgMember(resource.data.orgId) || isOrgMember(request.query.filters.orgId));
       allow write: if isSignedIn() && isOrgMember(request.resource.data.orgId);
     }
-
+    
     match /medications/{medicationId} {
-      allow read: if isSignedIn() && isOrgMember(resource.data.orgId);
+      allow read: if isSignedIn() && (isOrgMember(resource.data.orgId) || isOrgMember(request.query.filters.orgId));
       allow write: if isSignedIn() && isOrgMember(request.resource.data.orgId);
     }
 
