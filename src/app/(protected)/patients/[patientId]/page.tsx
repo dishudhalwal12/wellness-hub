@@ -23,9 +23,9 @@ import ReactMarkdown from 'react-markdown';
 import { generatePrescription } from '@/ai/flows/ai-prescription-generator';
 import { aiSmartNotesDrafting } from '@/ai/ai-smart-notes-drafting';
 import { generateInvoice } from '@/ai/ai-smart-billing';
-import { useDoc, useMemoFirebase, useUser, useFirestore } from '@/firebase';
+import { useDoc, useMemoFirebase, useUser, useFirestore, useCollection } from '@/firebase';
 import Link from "next/link";
-import { doc, type DocumentData, setDoc } from 'firebase/firestore';
+import { doc, type DocumentData, setDoc, query, collection, where, orderBy, limit } from 'firebase/firestore';
 import type { Patient } from '@/app/(protected)/patients/page';
 import { useParams } from 'next/navigation';
 import { PageHeader } from '@/components/app/ui';
@@ -206,9 +206,14 @@ function IntelligencePanel({
     const { toast } = useToast();
     const { profile } = useUser();
     const firestore = useFirestore();
-    const { data: orgData } = useDoc(profile?.orgId ? doc(firestore!, 'orgs', profile.orgId) : null);
+    const orgDocRef = useMemoFirebase(() => {
+        if (!firestore || !profile?.orgId) return null;
+        return doc(firestore, 'orgs', profile.orgId);
+    }, [firestore, profile?.orgId]);
+    const { data: orgData } = useDoc(orgDocRef);
     const orgApiKey = orgData?.googleApiKey;
     const activeDiagnosis = diagnosis ?? previewDiagnosis;
+    const hasReport = (reportContent && reportContent.trim().length > 0);
     
     const [smartNote, setSmartNote] = useState<{ assessmentSuggestion: string, planSuggestion: string } | null>(null);
     const [isGeneratingNote, setIsGeneratingNote] = useState(false);
@@ -339,7 +344,7 @@ function IntelligencePanel({
     };
 
     const handleSendMessage = async () => {
-        if (!chatInput.trim() || !reportContent || !activeDiagnosis) {
+        if (!chatInput.trim() || !activeDiagnosis) {
             return;
         }
 
@@ -351,7 +356,7 @@ function IntelligencePanel({
 
         try {
             const result = await askDiagnosticQuestion(
-                reportContent,
+                reportContent || "No specific report content provided.",
                 chatInput,
                 currentMessages,
                 JSON.stringify(activeDiagnosis),
@@ -589,7 +594,7 @@ function IntelligencePanel({
                                         {message.role === 'model' && <Bot className="w-6 h-6 flex-shrink-0" />}
                                         <div className={`p-3 rounded-lg max-w-sm ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                                             <div className="prose prose-sm max-w-none">
-                                                <ReactMarkdown>{message.parts[0].text}</ReactMarkdown>
+                                                <ReactMarkdown>{String(message.parts[0].text)}</ReactMarkdown>
                                             </div>
                                         </div>
                                         {message.role === 'user' && <User className="w-6 h-6 flex-shrink-0" />}
@@ -632,7 +637,11 @@ export default function PatientProfilePage() {
   const { patientId } = useParams() as { patientId: string };
   const [reportContent, setReportContent] = useState<string | null>(null);
   const firestore = useFirestore();
-  const { data: orgData } = useDoc(profile?.orgId ? doc(firestore!, 'orgs', profile.orgId) : null);
+  const orgDocRef = useMemoFirebase(() => {
+    if (!firestore || !profile?.orgId) return null;
+    return doc(firestore, 'orgs', profile.orgId);
+  }, [firestore, profile?.orgId]);
+  const { data: orgData } = useDoc(orgDocRef);
   const orgApiKey = orgData?.googleApiKey;
   const [fileName, setFileName] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -642,6 +651,25 @@ export default function PatientProfilePage() {
   const { toast } = useToast();
 
   const isDemoPatient = patientId?.startsWith('demo-');
+
+  // Load latest diagnosis from Firestore
+  const diagnosesQuery = useMemoFirebase(() => {
+      if (!firestore || !patientId || isDemoPatient) return null;
+      return query(
+          collection(firestore, 'diagnoses'),
+          where('patientId', '==', patientId),
+          orderBy('createdAt', 'desc'),
+          limit(1)
+      );
+  }, [firestore, patientId, isDemoPatient]);
+  
+  const { data: latestDiagnoses } = useCollection<any>(diagnosesQuery);
+  
+  useEffect(() => {
+      if (latestDiagnoses?.[0]?.diagnosis) {
+          setDiagnosis(latestDiagnoses[0].diagnosis);
+      }
+  }, [latestDiagnoses]);
 
   const patientDocRef = useMemoFirebase(() => {
       if (!firestore || !patientId || isDemoPatient) return null;
@@ -664,7 +692,7 @@ export default function PatientProfilePage() {
   }
 
   const effectiveReportContent = reportContent ?? (isDemoPatient ? demoPatientReportContent : "");
-  const effectiveFileName = fileName ?? (isDemoPatient ? 'baseline-labs-mar-2026.txt' : '');
+  const effectiveFileName = fileName ?? (isDemoPatient ? "demo-health-report.txt" : "No report uploaded");
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -817,7 +845,7 @@ export default function PatientProfilePage() {
           <div className="lg:col-span-4">
             <IntelligencePanel
               diagnosis={diagnosis}
-              previewDiagnosis={diagnosis ? null : demoPatientDiagnosis}
+              previewDiagnosis={diagnosis ? null : (isDemoPatient ? demoPatientDiagnosis : null)}
               isDiagnosing={isDiagnosing}
               reportContent={effectiveReportContent}
               patientId={patientId}
