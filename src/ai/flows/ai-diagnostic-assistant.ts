@@ -85,8 +85,16 @@ export async function diagnoseHealthReport(reportText: string, orgId?: string, a
   try {
     const aiResultText = await callGenerativeModel(prompt, orgId, apiKey);
     
-    // The model is now configured to return JSON directly
-    const parsed = JSON.parse(aiResultText);
+    // Robust JSON parsing: handle markdown-wrapped JSON if necessary
+    let cleanJson = aiResultText.trim();
+    if (cleanJson.startsWith('```')) {
+      const match = cleanJson.match(/```(?:json)?\n?([\s\S]*?)\n?```/);
+      if (match) {
+        cleanJson = match[1].trim();
+      }
+    }
+    
+    const parsed = JSON.parse(cleanJson);
     return parsed as DiagnosisResult;
 
   } catch (e) {
@@ -108,6 +116,7 @@ export async function askDiagnosticQuestion(
     // Use the robust getGenerativeModel to avoid 404 errors
     const model = await getGenerativeModel({ orgId, apiKey });
 
+    // Ensure history strictly alternates and starts with user
     const history = [
         {
             role: "user" as const,
@@ -117,8 +126,13 @@ export async function askDiagnosticQuestion(
             role: "model" as const,
             parts: [{ text: "I have reviewed the report and the initial diagnosis. I am ready to answer your follow-up questions about this specific case." }],
         },
-        ...chatHistory
+        ...chatHistory.filter((m, i) => {
+            // Very basic filter: ensures first message after system prompt is 'user', and roles alternate
+            const expectedRole = i % 2 === 0 ? 'user' : 'model';
+            return m.role === expectedRole;
+        })
     ];
+
 
     const chat = model.startChat({
         history,

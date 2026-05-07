@@ -33,8 +33,12 @@ export async function aiSmartNotesDrafting({ patientData, orgId, apiKey }: { pat
         const parsed = JSON.parse(text);
 
         return {
-            assessmentSuggestion: parsed.assessmentSuggestion,
-            planSuggestion: parsed.planSuggestion,
+            assessmentSuggestion: Array.isArray(parsed.assessmentSuggestion) 
+                ? parsed.assessmentSuggestion.join('\n') 
+                : (parsed.assessmentSuggestion || ""),
+            planSuggestion: Array.isArray(parsed.planSuggestion) 
+                ? parsed.planSuggestion.join('\n') 
+                : (parsed.planSuggestion || ""),
             progress: 'AI-generated assessment and plan drafts ready for review.'
         };
     } catch (e) {

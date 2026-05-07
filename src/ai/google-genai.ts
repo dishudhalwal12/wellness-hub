@@ -35,7 +35,7 @@ export async function getGenerativeModel(options?: { apiKey?: string; orgId?: st
         const modelId = resolved.model.startsWith('models/') ? resolved.model.substring('models/'.length) : resolved.model;
         
         // Filter out the custom apiKey option before passing to the SDK
-        const { apiKey: _, ...restOptions } = options || {};
+        const { apiKey: _, orgId: __, ...restOptions } = options || {};
         return client.getGenerativeModel({ model: modelId, ...restOptions });
 
     } catch (e) {

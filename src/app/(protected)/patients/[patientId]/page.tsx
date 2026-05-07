@@ -91,7 +91,7 @@ function PatientSummaryCard({ patient, patientId }: { patient: Patient | null, p
                     // Get the most recent one
                     setLastDiagnosis(storedDiagnoses.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0].diagnosis);
                 } else {
-                    setLastDiagnosis(demoPatientDiagnosis);
+                    setLastDiagnosis(null);
                 }
             } catch (e) { console.error("Failed to load diagnoses from local storage", e); }
 
@@ -99,7 +99,7 @@ function PatientSummaryCard({ patient, patientId }: { patient: Patient | null, p
             // In a real app with multiple users, we'd filter by patientId, but for prototype it's ok.
              try {
                 const allStoredMeds: Medication[] = JSON.parse(localStorage.getItem(`${MEDS_STORAGE_KEY}-${patientId}`) || '[]');
-                setActiveMedications(allStoredMeds.length > 0 ? allStoredMeds : getSeedMedications(patientId));
+                setActiveMedications(allStoredMeds.length > 0 ? allStoredMeds : []);
             } catch (e) { console.error("Failed to load medications from local storage", e); }
         }
     }, [patientId]);
@@ -199,6 +199,12 @@ function IntelligencePanel({
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [isReplying, setIsReplying] = useState(false);
     const [chatInput, setChatInput] = useState('');
+
+    // Reset chat when a new diagnosis is loaded or patient changes
+    useEffect(() => {
+        setMessages([]);
+    }, [diagnosis, patientId]);
+
     const [prescription, setPrescription] = useState<string | null>(null);
     const [isGeneratingRx, setIsGeneratingRx] = useState(false);
     const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -235,31 +241,7 @@ function IntelligencePanel({
         }
     }, [messages, isReplying]);
     
-    const saveDiagnosisToDb = async (diagnosisData: DiagnosisOutput) => {
-        if (!firestore || !profile?.orgId) return;
-        try {
-            const diagnosisId = crypto.randomUUID();
-            await setDoc(doc(firestore, 'diagnoses', diagnosisId), {
-                id: diagnosisId,
-                patientId: patientId,
-                orgId: profile.orgId,
-                diagnosis: diagnosisData,
-                createdAt: new Date().toISOString(),
-            });
-            
-            const storedDiagnoses: StoredDiagnosis[] = JSON.parse(localStorage.getItem(`${DIAGNOSIS_STORAGE_KEY}-${patientId}`) || '[]');
-            const newDiagnosis: StoredDiagnosis = {
-                id: diagnosisId,
-                patientId: patientId,
-                diagnosis: diagnosisData,
-                createdAt: new Date().toISOString(),
-            };
-            const updatedDiagnoses = [newDiagnosis, ...storedDiagnoses].slice(0, 5);
-            localStorage.setItem(`${DIAGNOSIS_STORAGE_KEY}-${patientId}`, JSON.stringify(updatedDiagnoses));
-        } catch (error) {
-            console.error("Failed to save diagnosis:", error);
-        }
-    };
+
 
     const getPriorityVariant = (priority: 'High' | 'Medium' | 'Low') => {
         switch (priority) {
@@ -352,7 +334,7 @@ function IntelligencePanel({
             const result = await askDiagnosticQuestion(
                 reportContent || "No specific report content provided.",
                 question,
-                currentMessages,
+                messages,
                 JSON.stringify(activeDiagnosis),
                 profile?.orgId || '',
                 orgApiKey
@@ -642,6 +624,32 @@ export default function PatientProfilePage() {
   const [isDiagnosing, setIsDiagnosing] = useState(false);
   const [diagnosis, setDiagnosis] = useState<DiagnosisOutput | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const saveDiagnosisToDb = async (diagnosisData: DiagnosisOutput) => {
+      if (!firestore || !profile?.orgId) return;
+      try {
+          const diagnosisId = crypto.randomUUID();
+          await setDoc(doc(firestore, 'diagnoses', diagnosisId), {
+              id: diagnosisId,
+              patientId: patientId,
+              orgId: profile.orgId,
+              diagnosis: diagnosisData,
+              createdAt: new Date().toISOString(),
+          });
+          
+          const storedDiagnoses: StoredDiagnosis[] = JSON.parse(localStorage.getItem(`${DIAGNOSIS_STORAGE_KEY}-${patientId}`) || '[]');
+          const newDiagnosis: StoredDiagnosis = {
+              id: diagnosisId,
+              patientId: patientId,
+              diagnosis: diagnosisData,
+              createdAt: new Date().toISOString(),
+          };
+          const updatedDiagnoses = [newDiagnosis, ...storedDiagnoses].slice(0, 5);
+          localStorage.setItem(`${DIAGNOSIS_STORAGE_KEY}-${patientId}`, JSON.stringify(updatedDiagnoses));
+      } catch (error) {
+          console.error("Failed to save diagnosis:", error);
+      }
+  };
   const { toast } = useToast();
 
   const isDemoPatient = patientId?.startsWith('demo-');
@@ -665,6 +673,23 @@ export default function PatientProfilePage() {
           setDiagnosis(latestDiagnoses[0].diagnosis);
       }
   }, [latestDiagnoses, diagnosis, isDiagnosing]);
+
+  // Fallback: Load from localStorage if Firestore fails or is empty
+  useEffect(() => {
+      if (!diagnosis && !isDiagnosing && patientId && typeof window !== 'undefined') {
+          const stored = localStorage.getItem(`${DIAGNOSIS_STORAGE_KEY}-${patientId}`);
+          if (stored) {
+              try {
+                  const storedDiagnoses = JSON.parse(stored);
+                  if (storedDiagnoses?.[0]?.diagnosis) {
+                      setDiagnosis(storedDiagnoses[0].diagnosis);
+                  }
+              } catch (e) {
+                  console.error("Failed to parse stored diagnosis:", e);
+              }
+          }
+      }
+  }, [diagnosis, isDiagnosing, patientId]);
 
   const patientDocRef = useMemoFirebase(() => {
       if (!firestore || !patientId || isDemoPatient) return null;
@@ -760,17 +785,8 @@ export default function PatientProfilePage() {
         
         setDiagnosis(finalDiagnosis);
 
-        // Save to Firestore
-        if (firestore && profile?.orgId) {
-            const diagnosisId = crypto.randomUUID();
-            await setDoc(doc(firestore, 'diagnoses', diagnosisId), {
-                id: diagnosisId,
-                patientId: patientId,
-                orgId: profile.orgId,
-                diagnosis: finalDiagnosis,
-                createdAt: new Date().toISOString(),
-            });
-        }
+        // Save to Database and Local Storage
+        await saveDiagnosisToDb(finalDiagnosis);
 
     } catch (error) {
         console.error("Diagnosis failed:", error);
@@ -855,7 +871,7 @@ export default function PatientProfilePage() {
           <div className="lg:col-span-4">
             <IntelligencePanel
               diagnosis={diagnosis}
-              previewDiagnosis={diagnosis ? null : (isDemoPatient ? demoPatientDiagnosis : null)}
+              previewDiagnosis={null}
               isDiagnosing={isDiagnosing}
               reportContent={effectiveReportContent}
               patientId={patientId}
