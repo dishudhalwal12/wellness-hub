@@ -35,7 +35,7 @@ export default function AuthPageController({
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="ml-2 text-muted-foreground">Loading PulseNet...</p>
+        <p className="ml-2 text-muted-foreground">Loading WellnessHub...</p>
       </div>
     );
   }

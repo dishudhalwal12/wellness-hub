@@ -1,14 +1,14 @@
-# PulseNet: Your AI-Powered Clinical Copilot
+# WellnessHub: Your AI-Powered Clinical Copilot
 
 ## 1. Vision: Supercharging the Modern Clinic
 
-**PulseNet** is a state-of-the-art, AI-powered clinical operations platform designed to act as a **copilot for doctors**. Our vision is to empower private practitioners by automating administrative burdens, amplifying diagnostic capabilities, and streamlining every facet of clinic management. We handle the operational complexities so you can focus on what truly matters: your patients.
+**WellnessHub** is a state-of-the-art, AI-powered clinical operations platform designed to act as a **copilot for doctors**. Our vision is to empower private practitioners by automating administrative burdens, amplifying diagnostic capabilities, and streamlining every facet of clinic management. We handle the operational complexities so you can focus on what truly matters: your patients.
 
 ---
 
 ## 2. App Description & Current Workflow
 
-**PulseNet** is an intelligent, all-in-one platform for medical clinics that integrates a powerful **AI Diagnostic Copilot** and an **AI Reception Assistant** directly into your workflow. The application is designed for role-based access, catering to Doctors, Admins, and Staff.
+**WellnessHub** is an intelligent, all-in-one platform for medical clinics that integrates a powerful **AI Diagnostic Copilot** and an **AI Reception Assistant** directly into your workflow. The application is designed for role-based access, catering to Doctors, Admins, and Staff.
 
 ### a. User Onboarding & Authentication
 The journey begins at the login screen, which serves a dual purpose: authentication for existing users and registration for new ones.

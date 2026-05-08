@@ -62,7 +62,7 @@ interface FirebaseProviderProps {
   auth: Auth;
 }
 
-const PROFILE_CACHE_PREFIX = 'pulsenet-profile:';
+const PROFILE_CACHE_PREFIX = 'wellnesshub-profile:';
 
 function omitUndefinedFields<T extends Record<string, any>>(value: T): Partial<T> {
   return Object.fromEntries(

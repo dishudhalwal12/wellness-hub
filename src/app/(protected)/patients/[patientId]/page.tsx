@@ -75,8 +75,8 @@ type Medication = {
   notes: string;
 };
 
-const DIAGNOSIS_STORAGE_KEY = 'pulsenet-diagnoses';
-const MEDS_STORAGE_KEY = 'pulsenet-medications';
+const DIAGNOSIS_STORAGE_KEY = 'wellnesshub-diagnoses';
+const MEDS_STORAGE_KEY = 'wellnesshub-medications';
 
 function PatientSummaryCard({ patient, patientId }: { patient: Patient | null, patientId: string }) {
     const [lastDiagnosis, setLastDiagnosis] = useState<DiagnosisOutput | null>(null);
@@ -308,7 +308,7 @@ function IntelligencePanel({
                 patientName: "John Doe", // Fallback for prototype
                 patientId: patientId,
                 dateOfService: new Date().toISOString().split('T')[0],
-                clinicName: profile.orgName || "PulseNet Clinic",
+                clinicName: profile.orgName || "WellnessHub Clinic",
                 providerName: profile.name || "Attending Physician",
                 orgId: profile?.orgId || '',
                 apiKey: orgApiKey,

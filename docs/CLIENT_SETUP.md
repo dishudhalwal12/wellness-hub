@@ -19,7 +19,7 @@ Then open GitHub Copilot Chat in Agent mode and paste this exact prompt:
 I want you to fully set up and run this project for me on this laptop.
 
 Repository:
-https://github.com/dishudhalwal12/pulsenet.git
+https://github.com/dishudhalwal12/wellnesshub.git
 
 Please do all of this step by step:
 1. Check whether Git is installed. If not, tell me exactly what to install and wait.
@@ -51,8 +51,8 @@ If a terminal permission popup appears in VS Code, I approve it.
 If Copilot Agent is unavailable, the client can still run this manually:
 
 ```bash
-git clone https://github.com/dishudhalwal12/pulsenet.git
-cd pulsenet
+git clone https://github.com/dishudhalwal12/wellnesshub.git
+cd wellnesshub
 npm install
 npm run dev
 ```

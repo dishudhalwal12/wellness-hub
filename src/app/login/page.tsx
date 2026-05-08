@@ -193,7 +193,7 @@ export default function LoginPage() {
   
 
 
-  const currentTitle = formType === 'login' ? 'Sign in to PulseNet' : 'Create your PulseNet account';
+  const currentTitle = formType === 'login' ? 'Sign in to WellnessHub' : 'Create your WellnessHub account';
 
   if (isUserLoading) {
     return (
@@ -268,7 +268,7 @@ export default function LoginPage() {
                     <>
                       <div className="space-y-2">
                         <Label htmlFor="orgName">Clinic Name</Label>
-                        <Input id="orgName" {...register("orgName")} placeholder="Sunrise PulseNet Clinic" />
+                        <Input id="orgName" {...register("orgName")} placeholder="Sunrise WellnessHub Clinic" />
                         {errors.orgName && <p className="text-destructive text-xs">{`${errors.orgName.message}`}</p>}
                       </div>
                       <div className="space-y-2">

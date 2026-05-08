@@ -1,5 +1,5 @@
 /**
- * @fileoverview Combined Firestore Security Rules for PulseNet + Event Management.
+ * @fileoverview Combined Firestore Security Rules for WellnessHub + Event Management.
  *
  * Core Philosophy:
  * This ruleset enforces security models for both healthcare organizations and event management.
@@ -92,7 +92,7 @@ service cloud.firestore {
     }
 
     // =================================
-    // PulseNet Collection Rules
+    // WellnessHub Collection Rules
     // =================================
 
     match /orgs/{orgId} {

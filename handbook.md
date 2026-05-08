@@ -1,17 +1,17 @@
-# 🩺 PulseNet: The Agency Handbook
+# 🩺 WellnessHub: The Agency Handbook
 
-Welcome to the **PulseNet** project! If you're reading this, you've likely just inherited or are about to deploy one of the most polished AI-powered clinical platforms in our agency's portfolio. 
+Welcome to the **WellnessHub** project! If you're reading this, you've likely just inherited or are about to deploy one of the most polished AI-powered clinical platforms in our agency's portfolio. 
 
-PulseNet isn't just a "student project"—it's a vision for the future of private practice. We build this for B.Tech 3rd-year students who want to see what a "production-ready" SaaS looks like. It’s sleek, it’s smart, and it actually works.
+WellnessHub isn't just a "student project"—it's a vision for the future of private practice. We build this for B.Tech 3rd-year students who want to see what a "production-ready" SaaS looks like. It’s sleek, it’s smart, and it actually works.
 
 ---
 
 ## 🏗 The Core Context
-**What is PulseNet?**  
+**What is WellnessHub?**  
 It’s an **AI Clinical Copilot**. Think of it as the ultimate assistant for a doctor running a private clinic. It handles the boring stuff (billing, notes, queue management) so the doctor can focus on the patient.
 
 **The Agency Vibe:**  
-We don't like "empty states." If a user logs in and sees a blank screen, we've failed. That's why PulseNet is pre-loaded with high-fidelity **Demo Data**. Even if the database is empty, the app looks like a busy, thriving clinic.
+We don't like "empty states." If a user logs in and sees a blank screen, we've failed. That's why WellnessHub is pre-loaded with high-fidelity **Demo Data**. Even if the database is empty, the app looks like a busy, thriving clinic.
 
 ---
 
@@ -82,7 +82,7 @@ The crown jewel.
 
 ## 🔑 The "Secret Sauce" (Setup)
 
-To make PulseNet "Smart," you need to feed it an API Key.
+To make WellnessHub "Smart," you need to feed it an API Key.
 1. Create a `.env.local` in the root.
 2. Add your `GOOGLE_API_KEY`.
 3. Set `GENAI_MODEL=gemini-2.0-flash`.
@@ -92,7 +92,7 @@ To make PulseNet "Smart," you need to feed it an API Key.
 ---
 
 ## 💡 A Note on Tone
-PulseNet should feel **Premium**. 
+WellnessHub should feel **Premium**. 
 - Use **Glassmorphism** (check `globals.css` for `.glass-card`).
 - Use **Subtle Animations** (we use `framer-motion` and `tailwindcss-animate`).
 - Keep the language **Professional yet Human**. No "Error 404," use "We couldn't find that patient record."

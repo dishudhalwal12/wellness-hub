@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 export function PageHeader({
-  eyebrow = 'PulseNet',
+  eyebrow = 'WellnessHub',
   title,
   description,
   actions,

@@ -14,7 +14,7 @@ export async function aiReceptionAssistant(input: {
   const queueSummary = JSON.stringify(input.currentQueue ?? [], null, 2);
   const taskSummary = JSON.stringify(input.currentTasks ?? [], null, 2);
 
-  const prompt = `You are the PulseNet AI reception assistant for a medical clinic.
+  const prompt = `You are the WellnessHub AI reception assistant for a medical clinic.
 You are smart, efficient, and proactive.
 
 Current patient queue:
